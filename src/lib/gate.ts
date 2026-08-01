@@ -305,7 +305,16 @@ export function previewFlag(input: {
   actor: string | null
   key: string
   exists: boolean
-  enabled: boolean
+  /**
+   * The value the flag holds NOW, not the one it is about to take.
+   *
+   * Named for what it is because the sentence below turns on it, and the first version of this
+   * function took the two meanings for the same field: the caller passed the current value and
+   * the note read it as the incoming one, so a flag being switched OFF was previewed as having
+   * been "off until now". A preview that describes the record wrongly is worse than no preview —
+   * the operator signs for it.
+   */
+  wasEnabled: boolean
 }): AuditPreview {
   return {
     actor: input.actor ?? UNKNOWN_ACTOR,
@@ -315,7 +324,9 @@ export function previewFlag(input: {
     outcome: 'allowed',
     reasonCode: null,
     notes: [
-      `The row records the value BEFORE and AFTER, so the record says it was ${input.enabled ? 'off until now' : 'on until now'} rather than only what it is.`,
+      input.exists
+        ? `The row records the value BEFORE and AFTER, so the record will say it was ${input.wasEnabled ? 'ON' : 'OFF'} until now rather than only what it becomes.`
+        : 'This is the first write of this key, so the row records a creation with no previous value.',
       'An admin.flag.changed event is emitted whether or not the boolean moved, because an owner change is still a change.',
     ],
   }
@@ -363,7 +374,16 @@ export function previewBroadcast(input: {
  * anyway (`state_conflict`, server.ts:395).
  */
 export function idempotencyKeyFor(scope: string, subject: string, mintedAt: number): string {
-  const key = `admin-web-${scope}-${subject}-${mintedAt.toString(36)}`
+  // ── THE SUBJECT IS NOT ALWAYS A UUID, AND THIS IS A HEADER VALUE.
+  //
+  // The broadcast composer keys on the notice's TITLE, because a retry of the same notice must
+  // present the same key and a genuinely different notice a different one. An operator's title is
+  // free text: it can carry a newline pasted out of an incident channel, and a header value
+  // containing one makes `fetch` throw before the request is sent — which the console would show
+  // as an unexplained failure to publish, during an incident, on the screen that exists for
+  // incidents. Everything outside the safe set collapses to `-`.
+  const safe = subject.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
+  const key = `admin-web-${scope}-${safe}-${mintedAt.toString(36)}`
   // The floor is the service's, restated: a subject shorter than expected must not produce a key
   // the route answers 400 for, which would read to an operator as "the form is broken".
   return key.length >= 8 ? key.slice(0, 200) : `${key}-padded-to-length`

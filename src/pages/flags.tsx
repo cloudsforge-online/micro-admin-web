@@ -112,7 +112,7 @@ function FlagRow({ flag, onDone }: { flag: FeatureFlag; onDone: () => void }) {
         'This can be flipped back. The record of both flips stays.',
       ]}
       previews={[
-        previewFlag({ actor: operator.principal, key: flag.key, exists: true, enabled: flag.enabled }),
+        previewFlag({ actor: operator.principal, key: flag.key, exists: true, wasEnabled: flag.enabled }),
       ]}
       runLabel={`Turn ${next ? 'on' : 'off'}`}
       busy={flip.busy}

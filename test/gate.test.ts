@@ -436,22 +436,37 @@ describe('the preview reproduces the rows admin-api will write', () => {
   })
 
   it('a first flag write previews admin.flag.created', () => {
-    const preview = previewFlag({ actor: APPROVER, key: 'k', exists: false, enabled: false })
+    const preview = previewFlag({ actor: APPROVER, key: 'k', exists: false, wasEnabled: false })
     assert.equal(preview.action, 'admin.flag.created')
     assert.equal(preview.subjectKind, 'feature_flag')
     assert.equal(preview.subjectId, 'k')
   })
 
+  it('says a first write has no previous value, rather than inventing one', () => {
+    const preview = previewFlag({ actor: APPROVER, key: 'k', exists: false, wasEnabled: false })
+    assert.ok(preview.notes.some((n) => /no previous value/.test(n)))
+  })
+
   it('a later flag write previews admin.flag.changed', () => {
     assert.equal(
-      previewFlag({ actor: APPROVER, key: 'k', exists: true, enabled: true }).action,
+      previewFlag({ actor: APPROVER, key: 'k', exists: true, wasEnabled: true }).action,
       'admin.flag.changed',
     )
   })
 
   it('says the flag row records the value before and after', () => {
-    const preview = previewFlag({ actor: APPROVER, key: 'k', exists: true, enabled: true })
+    const preview = previewFlag({ actor: APPROVER, key: 'k', exists: true, wasEnabled: true })
     assert.ok(preview.notes.some((n) => /BEFORE and AFTER/.test(n)))
+  })
+
+  it('names the value the flag holds NOW, not the one it is about to take', () => {
+    // The first version of this function took the two meanings for one field: the caller passed
+    // the current value and the note read it as the incoming one, so a flag being switched OFF
+    // was previewed as having been "off until now". The operator signs for this text.
+    const on = previewFlag({ actor: APPROVER, key: 'k', exists: true, wasEnabled: true })
+    assert.ok(on.notes.some((n) => /was ON until now/.test(n)), on.notes.join(' | '))
+    const off = previewFlag({ actor: APPROVER, key: 'k', exists: true, wasEnabled: false })
+    assert.ok(off.notes.some((n) => /was OFF until now/.test(n)), off.notes.join(' | '))
   })
 
   it('a publish previews admin.broadcast.published', () => {
@@ -476,7 +491,7 @@ describe('the preview reproduces the rows admin-api will write', () => {
       previewRequest({ actor: null, action: 'a', subjectKind: 'k', subjectId: 's', reasonCode: 'r' }),
       ...previewDecision(approval(), true, null),
       ...previewDecision(approval(), false, null),
-      previewFlag({ actor: null, key: 'k', exists: true, enabled: true }),
+      previewFlag({ actor: null, key: 'k', exists: true, wasEnabled: true }),
       previewBroadcast({ actor: null, retract: false, id: null }),
       previewBroadcast({ actor: null, retract: true, id: 'b' }),
     ]
@@ -518,5 +533,27 @@ describe('the idempotency key is per intention, not per click', () => {
 
   it('contains no character that would need escaping in a header', () => {
     assert.match(idempotencyKeyFor('grant', ID, Date.now()), /^[A-Za-z0-9._-]+$/)
+  })
+
+  it('survives a subject that is FREE TEXT, because one of them is', () => {
+    // The broadcast composer keys on the notice's title so a retry presents the same key. A title
+    // is typed by a person and can carry a newline pasted out of an incident channel — and a
+    // header value containing one makes `fetch` throw before the request leaves, which the console
+    // would show as an unexplained failure to publish, during an incident.
+    const key = idempotencyKeyFor('broadcast', 'Ledger down\n  — ETA 03:00 (see #inc-4)', 1000)
+    assert.match(key, /^[A-Za-z0-9._-]+$/, key)
+  })
+
+  it('still distinguishes two different free-text subjects after sanitising', () => {
+    assert.notEqual(
+      idempotencyKeyFor('broadcast', 'Ledger down', 1000),
+      idempotencyKeyFor('broadcast', 'Market down', 1000),
+    )
+  })
+
+  it('survives a subject made entirely of characters it has to strip', () => {
+    const key = idempotencyKeyFor('broadcast', '!!! ??? ***', 1000)
+    assert.ok(key.length >= 8)
+    assert.match(key, /^[A-Za-z0-9._-]+$/, key)
   })
 })
