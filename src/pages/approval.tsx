@@ -49,7 +49,9 @@ export function ApprovalPage() {
     async (signal: AbortSignal) => (await loadApproval(id, { signal })).approval,
     [id],
   )
-  const request = useResource<Approval>(load, () => 1, 'That request could not be loaded.')
+  // The id is part of the question: navigating from one request to another inside the same route
+  // reuses this component, and without `[id]` the second request would show the first one's row.
+  const request = useResource<Approval>(load, () => 1, 'That request could not be loaded.', [id])
 
   return (
     <>

@@ -73,7 +73,15 @@ export function AuditPage() {
     [correlationId, actor, action],
   )
 
-  const audit = useResource<AuditPage>(load, (page) => page.events.length, 'The audit could not be read.')
+  const audit = useResource<AuditPage>(
+    load,
+    (page) => page.events.length,
+    'The audit could not be read.',
+    // Every filter is part of the question. An operator narrowing to a correlation id during an
+    // incident, and being shown the unfiltered log with the id still in the box, is being handed
+    // the wrong evidence with the right label on it.
+    [correlationId, actor, action],
+  )
   const now = new Date()
 
   return (

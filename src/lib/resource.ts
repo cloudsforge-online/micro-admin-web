@@ -46,6 +46,30 @@ export function useResource<T>(
   load: (signal: AbortSignal) => Promise<T>,
   count: (data: T) => number,
   fallbackMessage: string,
+  /**
+   * The VALUES the question depends on — a filter, a path parameter, a search term.
+   *
+   * ── Why this parameter exists, and why `load` is still not the dependency ─────────────────
+   *
+   * The template's version of this hook re-runs on `nonce` alone, and `load` is deliberately
+   * excluded because most callers recreate it every render, which would make the effect a render
+   * loop. That is correct for a screen with one fixed question, which is every screen the
+   * template was written for.
+   *
+   * It is WRONG for a screen whose question changes. Selecting "Approved" in the queue filter,
+   * or pasting a correlation id into the audit search, changes what should be asked — and with
+   * `[nonce]` as the only dependency the request is never re-sent. The console then shows the
+   * previous answer under the new filter, silently: the operator reads a list of pending requests
+   * with "Approved" selected above it, and there is nothing on screen to say why.
+   *
+   * That is a worse failure on this surface than on a dashboard. An operator filtering the audit
+   * to a correlation id during an incident, and being shown the unfiltered log with the id in the
+   * box, is being handed the wrong evidence with the right label on it.
+   *
+   * So the caller passes the values rather than the closure. `[nonce, ...deps]` re-runs on either,
+   * the in-flight request is aborted by the existing cleanup, and `load` stays out of the array.
+   */
+  deps: readonly unknown[] = [],
 ): Resource<T> {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<ErrorNotice | null>(null)
@@ -70,10 +94,11 @@ export function useResource<T>(
         setLoading(false)
       })
     return () => controller.abort()
-    // `load` is recreated every render by most callers, so it is deliberately not a dependency;
-    // `nonce` is what re-runs this, and it changes only when reload() is called.
+    // `load` is recreated every render by most callers, so it is deliberately not a dependency —
+    // it would make this effect a render loop. `nonce` re-runs it on demand and `deps` re-runs it
+    // when the QUESTION changes; see the note on the parameter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nonce])
+  }, [nonce, ...deps])
 
   const reload = useCallback(() => setNonce((n) => n + 1), [])
 

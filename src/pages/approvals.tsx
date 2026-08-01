@@ -54,6 +54,10 @@ export function ApprovalsPage() {
     load,
     (rows) => rows.length,
     'The approval queue could not be loaded.',
+    // The filter is part of the question. Without it here the console would show the previous
+    // answer under the new filter — a list of pending requests with "Approved" selected above it,
+    // and nothing on screen to say why.
+    [state],
   )
   const now = new Date()
 
@@ -73,11 +77,7 @@ export function ApprovalsPage() {
           <select
             className="aw-field__input"
             value={state}
-            onChange={(e) => {
-              setState(e.target.value as ApprovalState | '')
-              // The resource re-runs on the `load` identity changing, which `state` is a
-              // dependency of. Nothing else needs to happen here.
-            }}
+            onChange={(e) => setState(e.target.value as ApprovalState | '')}
           >
             {STATES.map((option) => (
               <option key={option.value} value={option.value}>
