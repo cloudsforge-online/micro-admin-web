@@ -4,7 +4,9 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **EVERY CALL BELOW CITES THE `admin-api/src/server.ts` LINE IT WAS VERIFIED AGAINST.**
  *
- * This estate has shipped clients against imagined surfaces seven times.
+ * This estate has shipped clients against imagined surfaces repeatedly —
+ * `docs/ecosystem/18-build-status.md` §3.3i and §3.3m, which record the class rather than a count
+ * that has drifted in four repositories.
  * `wallet/src/pricingclient.ts` called `GET /v1/quotes`; pricing has never served that route.
  * `micro-market` called `POST /v1/decisions/market.listing`; policy has no `/v1` routes at all, a
  * 404 from policy is `peerDecided`, and every listing came back 403 for as long as it lived. Most
