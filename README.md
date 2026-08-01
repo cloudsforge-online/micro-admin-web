@@ -189,14 +189,16 @@ pnpm build
 pnpm dev              # http://localhost:5183
 ```
 
-**One local wrinkle, recorded rather than worked around.** The surface registry gives `admin`
-devPort **3002** (`ui/packages/ui/src/surfaces.ts`) and `admin-api` binds **4014**
-(`admin-api/src/env.ts:167`, `admin-api/.env.example:76`). In production this is invisible: the
-console and its API are the same origin behind `admin.<apex>`, so every request is relative. Under
-`pnpm dev` it is not, and this repository does not paper over it with a literal port — a hard-coded
-host is a second, unversioned copy of the registry, and the copy is the one that will be wrong. Run
-`admin-api` with `PORT=3002` locally, or correct the registry. It is reported to `micro-ui`, whose
-file that is.
+**A local wrinkle that has since been fixed upstream.** The surface registry used to give `admin`
+devPort **3002** while `admin-api` binds **4014** (`admin-api/src/env.ts:167`,
+`admin-api/.env.example:76`), so `pnpm dev` resolved to a port with nothing on it. Production hid
+it — the console and its API share an origin behind `admin.<apex>`, so every request is relative.
+
+This repository refused to paper over it with a literal port, because a hard-coded host is a
+second, unversioned copy of the registry and the copy is the one that goes stale. It was reported
+to `micro-ui` and corrected there: the registry now says 4014, and `surfaces.test.ts` pins that
+value against the service with its citation instead of only checking that it collides with nothing
+— which is precisely why three wrong ports got through before it.
 
 ### The image
 
@@ -218,9 +220,9 @@ Reported, not fixed.
 
 | Where | What |
 | --- | --- |
-| `micro-web-template`, and `hub-web`, `site`, `foresight-web`, `foresight-admin-web` cut from it | `src/lib/auth.tsx` declares `interface Me { handle?, roles? }` and reads them off the top level of `/auth/me`. Identity nests them under `user` (`identity/src/server.ts:891-903`, `identity/src/users.ts:52-63`). `roles` is therefore always null, `isAdmin` in the company bar is always false, and the switcher hides the three `adminOnly` entries — including this console — from every signed-in operator. Read correctly here; see `src/lib/auth.tsx` and `test/auth.test.ts`. |
-| `micro-web-template` (inherited by every frontend cut from it) | The `Dockerfile` never copies `public/` into the build context, so `dist/` in the built image contains no favicon. `test/brand-chrome.test.ts` reads the source tree and passes regardless. §3.3e one layer down. |
-| `micro-ui` | `surfaces.ts` gives `admin` devPort 3002; `admin-api` binds 4014. Production is unaffected (same origin); `pnpm dev` resolves to a port with nothing on it. The same class as the foresight 4021/4011 collision that repository already fixed once. |
+| ~~`micro-web-template`, and `hub-web`, `site`, `foresight-web`, `foresight-admin-web`~~ **fixed** — and `emberkin-web`, which the original report missed | `src/lib/auth.tsx` declared `interface Me { handle?, roles? }` and reads them off the top level of `/auth/me`. Identity nests them under `user` (`identity/src/server.ts:891-903`, `identity/src/users.ts:52-63`). `roles` is therefore always null, `isAdmin` in the company bar is always false, and the switcher hides the three `adminOnly` entries — including this console — from every signed-in operator. Read correctly here; see `src/lib/auth.tsx` and `test/auth.test.ts`. |
+| ~~`micro-web-template`~~ **fixed**, along with `market-web`, `foresight-web`, `foresight-admin-web` and `status-web`, which were the ones actually affected | The `Dockerfile` never copied `public/` into the build context, so `dist/` in the built image contains no favicon. `test/brand-chrome.test.ts` reads the source tree and passes regardless. §3.3e one layer down. |
+| ~~`micro-ui`~~ **fixed** | `surfaces.ts` gave `admin` devPort 3002; `admin-api` binds 4014. Production is unaffected (same origin); `pnpm dev` resolves to a port with nothing on it. The same class as the foresight 4021/4011 collision that repository already fixed once. |
 
 Nothing was found wrong in `admin-api` itself. Two things about it are worth stating positively,
 because a reader may mistake them for gaps: `PUT /v1/flags/:key` and `DELETE /v1/broadcasts/:id`

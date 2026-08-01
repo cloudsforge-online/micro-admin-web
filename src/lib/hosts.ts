@@ -32,15 +32,18 @@
  * (`admin-api/src/server.ts:443`), which is the one that actually refuses.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * ── The dev port disagreement, recorded rather than worked around ──────────────────────────────
+ * ── The dev port disagreement, reported and now fixed ──────────────────────────────────────────
  *
- * The surface registry gives `admin` devPort **3002** (`ui/packages/ui/src/surfaces.ts`), and
- * `admin-api` binds **4014** (`admin-api/src/env.ts:167`, `admin-api/.env.example:76`). In
- * production that is invisible: the console and its API are the same origin behind
- * `admin.<apex>`, so `apiBase()` is `''` and every request is relative. Under `pnpm dev` it is
- * not, and this repository does NOT paper over it with a literal port — a hard-coded host is a
- * second, unversioned copy of the registry, and the copy is the one that will be wrong. It is
- * reported to `micro-ui`, whose file that is, and the README says how to run locally meanwhile.
+ * The surface registry gave `admin` devPort **3002** while `admin-api` binds **4014**
+ * (`admin-api/src/env.ts:167`, `admin-api/.env.example:76`), so `pnpm dev` resolved to a port
+ * nothing listens on. Production hid it: the console and its API are the same origin behind
+ * `admin.<apex>`, so `apiBase()` is `''` and every request is relative.
+ *
+ * This repository deliberately did NOT paper over it with a literal port — a hard-coded host is a
+ * second, unversioned copy of the registry, and the copy is the one that goes stale. It was
+ * reported to `micro-ui`, whose file that is, and corrected there: the registry now says 4014 and
+ * `surfaces.test.ts` pins it against the service, with the citation, so the next wrong value
+ * fails instead of merely looking plausible.
  */
 import {
   cloudsforgeHosts,

@@ -56,14 +56,17 @@ import {
 /**
  * Where `admin-api` is addressed from under `pnpm dev`, per the surface registry's `admin` entry.
  *
- * NOTE, and it is a real disagreement rather than a typo here: the registry says devPort 3002 and
- * `admin-api` binds 4014 (`admin-api/src/env.ts:167`). This suite asserts what the CLIENT sends,
- * which is whatever `cloudsforgeHosts()` resolves — so it is pinned to the registry, and it fails
- * the day the registry is corrected, which is the point at which somebody should look at it. In
- * production the two are the same origin and the base is empty; that case is pinned in
- * `hosts.test.ts`.
+ * This was pinned to 3002 while the registry disagreed with the service, with a note saying it
+ * would fail the day the registry was corrected and that somebody should look at it then. That
+ * day came: `micro-ui` now records devPort **4014**, the port `admin-api` actually binds
+ * (`admin-api/src/env.ts:167`), and `surfaces.test.ts` pins that value against the service rather
+ * than merely checking it collides with nothing — which is what let three wrong ports through.
+ *
+ * Still pinned to the registry rather than to a literal: this suite asserts what the CLIENT
+ * sends, which is whatever `cloudsforgeHosts()` resolves. In production the console and its API
+ * share an origin and the base is empty; that case is pinned in `hosts.test.ts`.
  */
-const ADMIN = 'http://localhost:3002'
+const ADMIN = 'http://localhost:4014'
 
 const APPROVAL_ID = '3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071'
 const BROADCAST_ID = '9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a'
