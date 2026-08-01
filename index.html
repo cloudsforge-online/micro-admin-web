@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+  data-cf-product picks the accent ramp and data-cf-substrate the ash ramp, both from
+  @cloudsforge/ui/tokens.css. They are on <html> and set STATICALLY here rather than by React,
+  because a page that paints before the attributes land flashes the default ember and then changes
+  colour.
+
+  'admin' is clay, #c2704f — an explicit block in tokens.css, added because the frozen estate's
+  platform/apps/admin set this exact attribute against a selector that did not exist and fell
+  through to the company ember in silence. The console was wearing the company's colour by
+  accident rather than by decision.
+
+  'warm' is the ash ramp the brand marks in brand/assets/admin/ are drawn on: their ground is a
+  flat #12100f warm near-black, and the warm substrate's --cf-ash-900 (#0e0c0a) is the same
+  family, so the favicon sits on the page without a visible plate around it.
+-->
+<html lang="en-GB" data-cf-product="admin" data-cf-substrate="warm">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="colour-scheme" content="dark" />
+    <!--
+      The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
+      the reason an error report can be pinned to the deploy that introduced it. It is an identity
+      rather than a configuration: it names the artefact, it does not tell it where it is running.
+    -->
+    <meta name="cf-release" content="dev" />
+
+    <!--
+      This console must not be indexed, previewed, or archived. It is operator-only and lives
+      behind a gateway rule that keeps it off the public internet; this tag is the second line,
+      for the case where something reaches it anyway. The gateway is the first — see README.md.
+    -->
+    <meta name="robots" content="noindex, nofollow, noarchive, noimageindex" />
+
+    <!--
+      Brand chrome for the `admin` surface, from micro-brand's assets/admin/ set.
+
+      THERE IS NO og CARD HERE, AND THAT IS THE ASSET SET'S OWN DECISION rather than an omission.
+      18-build-status.md §3.3k, which audited all fourteen planned frontends against the brand
+      sets, records it in one line: "`admin` deliberately does not [have one] — nobody shares an
+      operator console outward, and a card there would exist to satisfy a pattern rather than a
+      need." brand/assets/admin/ holds three favicons and a mark, and no og-1200x630.png.
+
+      The web template's test/brand-chrome.test.ts requires an og:image. That requirement is right
+      for every public surface and this is the one place it does not fit. It has NOT been deleted
+      or softened here: test/brand-chrome.test.ts in this repository keeps both favicon checks
+      verbatim, in both directions, and asserts the deliberate ABSENCE of an og card with the same
+      force — so adding one later fails the build and has to be argued for. See the header of that
+      file.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192x192.png" />
+
+    <title>CloudsForge Operator Console</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

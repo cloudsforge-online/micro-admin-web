@@ -1,0 +1,20 @@
+# What must never enter the build context.
+#
+# The first three are size and correctness: a host node_modules is the wrong platform's binaries,
+# dist is rebuilt inside the image, and .git carries every version of every file ever committed
+# here — including anything that was committed and then removed.
+node_modules
+dist
+.git
+.github
+test
+*.md
+.DS_Store
+
+# SECRETS. There is no .env in this repository and there must never be one — this bundle reads no
+# build-time configuration at all (see vite.config.ts). These lines exist so that a file created
+# by hand during an incident cannot be baked into an image that is then pushed to a registry.
+.env
+.env.*
+*.pem
+*.key

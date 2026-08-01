@@ -1,0 +1,1029 @@
+/**
+ * This app's own layer, on top of @cloudsforge/ui.
+ *
+ * Two prefixes, deliberately. `wt-` is the shell inherited from the web template — the sub-nav,
+ * the four states, the spinner — and is left alone so a fix upstream can be taken without a
+ * merge. `aw-` is this console's own layer. Neither can collide with, or quietly override, a
+ * `cf-` class from the design system.
+ *
+ * EVERY COLOUR, SPACE AND FONT IS A TOKEN. A literal hex here is a colour that will not follow
+ * the substrate, and a page that does not follow the substrate is the one page in the estate that
+ * looks wrong on a dark display. The console's ground is the WARM ash ramp
+ * (`--cf-ash-900`, #0e0c0a) set by `data-cf-substrate="warm"` in index.html — the same family as
+ * the #12100f field the brand marks in `brand/assets/admin/` are drawn on, so the favicon has no
+ * visible plate around it. The accent is clay, #c2704f, which comes from
+ * `[data-cf-product='admin']` in @cloudsforge/ui and is never written down here.
+ *
+ * ── State is never colour alone ───────────────────────────────────────────────────────────────
+ *
+ * Every `.aw-state` carries a glyph and a word; the tone class only tints them. The estate's
+ * reserved status hues sit dE 4.6 apart under protanopia, so a reader who cannot separate them
+ * still reads OK / DEGRADED / UNAVAILABLE. See src/components/tone.tsx.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cf-bg);
+  color: var(--cf-fg);
+  font-family: var(--cf-font, system-ui, sans-serif);
+  /* The bar is dark on every surface; the page follows the substrate. */
+  color-scheme: dark;
+}
+
+/* ----------------------------- sub-nav ----------------------------- */
+
+/*
+ * Docked at exactly the bar's height. `--cf-bar-h` is the token the bar itself is sized with, so
+ * the two cannot drift; a copied `46px` would leave a gap or an overlap the day the bar changes,
+ * on every surface at once and on none of the ones anybody rechecked.
+ */
+.wt-subnav {
+  position: sticky;
+  top: var(--cf-bar-h);
+  z-index: 40;
+  background: var(--cf-bg-raised);
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.wt-subnav__inner {
+  display: flex;
+  gap: 0.25rem;
+  align-items: stretch;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.wt-subnav__link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  color: var(--cf-fg-dim);
+  text-decoration: none;
+  font-size: 0.875rem;
+  /* The active marker is a 2px underline in the accent, and the LABEL also changes weight and
+     colour: colour is never the only channel. */
+  border-bottom: 2px solid transparent;
+}
+
+.wt-subnav__link:hover {
+  color: var(--cf-fg);
+  background: var(--cf-surface-hover);
+}
+
+.wt-subnav__link.is-active {
+  color: var(--cf-fg);
+  font-weight: 600;
+  border-bottom-color: var(--cf-accent);
+}
+
+.wt-subnav__link:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: -2px;
+}
+
+/* ------------------------------ page ------------------------------- */
+
+.wt-main {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.wt-page__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.wt-page__title {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.wt-panel {
+  background: var(--cf-surface-solid);
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.wt-panel__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--cf-fg-dim);
+  font-weight: 600;
+}
+
+.wt-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.wt-banner {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px dashed var(--cf-line-strong);
+  color: var(--cf-fg-dim);
+  font-size: 0.85rem;
+}
+
+.wt-note {
+  color: var(--cf-fg-dim);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.wt-link {
+  color: var(--cf-accent);
+}
+
+.wt-facts {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.wt-facts dt {
+  color: var(--cf-fg-mute);
+}
+
+.wt-facts dd {
+  margin: 0;
+}
+
+.wt-facts--mono dd {
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+}
+
+/* ------------------------- the four states ------------------------- */
+
+/*
+ * Loading, empty, failed and forbidden differ in SHAPE and WORDS as well as colour: a reader who
+ * cannot separate two hues still has two other channels telling them which of the four they are
+ * looking at.
+ */
+.wt-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 3rem 1rem;
+  border-radius: 10px;
+}
+
+.wt-state__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.wt-state__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.wt-state__hint,
+.wt-state__meta {
+  margin: 0;
+  color: var(--cf-fg-dim);
+  font-size: 0.875rem;
+  max-width: 34rem;
+}
+
+.wt-state--empty {
+  /* --cf-line and --cf-danger, not --cf-border and --cf-critical. The template names two custom
+     properties that tokens.css does not define, so every failure and forbidden state in every
+     frontend cut from it falls back to a hard-coded hex and a hard-coded rgba — which is exactly
+     the "does not follow the substrate" defect the header of this file forbids, shipped in the
+     template itself. Reported to micro-web-template; corrected here, and pinned by the
+     "names no literal colour" test in test/render.test.ts. */
+  border: 1px dashed var(--cf-line);
+  color: var(--cf-fg-dim);
+}
+
+.wt-state--failed {
+  border: 1px solid var(--cf-danger);
+}
+
+.wt-state--failed .wt-state__icon,
+.wt-state--forbidden .wt-state__icon {
+  color: var(--cf-danger);
+}
+
+.wt-state--forbidden {
+  border: 1px solid var(--cf-line);
+  background: var(--cf-bg-sunken);
+}
+
+/*
+ * The request id is the string a user reads down a phone line or pastes into a support form, so
+ * it is monospace, selectable and on a line of its own.
+ */
+.wt-reqid {
+  user-select: all;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--cf-bg-sunken);
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+}
+
+.wt-spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--cf-line-strong);
+  border-top-color: var(--cf-accent);
+  animation: wt-spin 0.7s linear infinite;
+}
+
+@keyframes wt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A spinner is decoration; a reader who asked for less motion gets a static ring. */
+@media (prefers-reduced-motion: reduce) {
+  .wt-spinner {
+    animation: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   The operator console's own layer.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ----------------------------- chrome ------------------------------ */
+
+/* Keyboard is the primary input for an operator working through a queue, so the skip link is the
+   first focusable thing on the page rather than an afterthought below the bar. */
+.aw-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 0.9rem;
+  background: var(--cf-accent);
+  color: var(--cf-accent-ink);
+  font-weight: 600;
+  border-radius: 0 0 6px 0;
+}
+
+.aw-skip:focus-visible {
+  left: 0;
+}
+
+/* A word and a border, never a colour alone: nothing in this console may depend on the accent to
+   say what the surface is. */
+.aw-opmark {
+  border: 1px solid var(--cf-accent);
+  color: var(--cf-accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------- page ------------------------------- */
+
+.aw-page-head {
+  margin: 0 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.aw-page-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.aw-page-lede {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--cf-fg-dim);
+}
+
+.aw-page-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.aw-crumbs {
+  margin-bottom: 1rem;
+  color: var(--cf-fg-mute);
+  font-size: 0.86rem;
+}
+
+.aw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+}
+
+.aw-toolbar--form {
+  align-items: flex-end;
+}
+
+.aw-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.aw-filters {
+  margin: 0 0 1rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.88rem;
+}
+
+/* ----------------------------- panels ----------------------------- */
+
+.aw-panel {
+  margin: 0 0 1.5rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--cf-bg-raised);
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+}
+
+.aw-panel__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.aw-panel__subtitle {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.aw-panel__lede,
+.aw-panel__aside {
+  margin: 0 0 0.9rem;
+  max-width: 74ch;
+  color: var(--cf-fg-dim);
+  font-size: 0.9rem;
+}
+
+/* A refusal is not an error. It is bordered rather than filled, so it reads as a boundary the
+   operator has come up against rather than as something that went wrong. */
+.aw-panel--refusal {
+  border-color: var(--cf-warn);
+}
+
+/* The gap section: §3.3g. Bordered in the danger tone because the fact it carries is that a
+   capability the estate names does not exist, which is a finding rather than a warning. */
+.aw-panel--gap {
+  border-color: var(--cf-danger);
+}
+
+/* ----------------------------- state words ------------------------ */
+
+.aw-state {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.aw-state__word {
+  font-weight: 700;
+}
+
+.aw-state--good {
+  color: var(--cf-success);
+}
+
+.aw-state--warn {
+  color: var(--cf-warn);
+}
+
+.aw-state--crit {
+  color: var(--cf-danger);
+}
+
+.aw-state--mute {
+  color: var(--cf-fg-mute);
+}
+
+/* ----------------------------- tiles ------------------------------ */
+
+.aw-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.aw-tile {
+  padding: 0.95rem 1rem;
+  background: var(--cf-bg-raised);
+  border: 1px solid var(--cf-line);
+  /* The status is carried by a 3px edge AS WELL AS the word in the header, never instead of it. */
+  border-left-width: 3px;
+  border-radius: 10px;
+}
+
+.aw-tile--good {
+  border-left-color: var(--cf-success);
+}
+
+.aw-tile--warn {
+  border-left-color: var(--cf-warn);
+}
+
+.aw-tile--crit {
+  border-left-color: var(--cf-danger);
+}
+
+.aw-tile__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.aw-tile__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.aw-tile__value {
+  margin: 0.45rem 0 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.aw-tile__detail,
+.aw-tile__reason {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--cf-fg-dim);
+}
+
+.aw-tile__upstream {
+  color: var(--cf-fg-mute);
+  margin-right: 0.35rem;
+}
+
+/* An absent figure is a WORD, never a dash and never a zero. */
+.aw-absent {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.aw-absent__word {
+  color: var(--cf-fg-mute);
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.aw-absent__why {
+  font-size: 0.78rem;
+  color: var(--cf-fg-dim);
+}
+
+.aw-figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The observation time, always beside the figure it belongs to. */
+.aw-asof {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--cf-fg-mute);
+}
+
+/* ----------------------------- notes ------------------------------ */
+
+.aw-note {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--cf-line);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: var(--cf-bg-raised);
+  font-size: 0.9rem;
+}
+
+.aw-note--good {
+  border-left-color: var(--cf-success);
+}
+
+.aw-note--warn {
+  border-left-color: var(--cf-warn);
+}
+
+.aw-note--crit {
+  border-left-color: var(--cf-danger);
+}
+
+.aw-note__icon {
+  flex: none;
+}
+
+/* ----------------------------- facts ------------------------------ */
+
+.aw-facts {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.aw-facts--tight {
+  gap: 0.25rem;
+  font-size: 0.86rem;
+}
+
+.aw-facts__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+@media (max-width: 40rem) {
+  .aw-facts__row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
+
+.aw-facts__label {
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aw-facts__value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ----------------------------- tables ----------------------------- */
+
+/* Wide content scrolls inside its own box; the page body never scrolls sideways. */
+.aw-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.aw-table__caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: 0.5rem;
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+}
+
+.aw-table th,
+.aw-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.aw-table thead th {
+  color: var(--cf-fg-mute);
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.aw-table tbody tr:hover {
+  background: var(--cf-surface-hover);
+}
+
+.aw-row-sub {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--cf-fg-mute);
+}
+
+/* "you raised this" — the fact that decides whether the reader can act on the row. */
+.aw-you {
+  color: var(--cf-warn);
+  font-weight: 600;
+}
+
+.aw-deadline--passed {
+  color: var(--cf-danger);
+  font-weight: 600;
+}
+
+.aw-on {
+  color: var(--cf-success);
+}
+
+.aw-off {
+  color: var(--cf-fg-mute);
+}
+
+.aw-link {
+  color: var(--cf-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+/* A filter control that reads as a link. It is a real button, so it is reachable by keyboard and
+   announced as an action rather than as a destination. */
+.aw-link--button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aw-link:focus-visible,
+.aw-link--button:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 2px;
+}
+
+.aw-code {
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--cf-bg-sunken);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+}
+
+.aw-params {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.aw-params__value {
+  color: var(--cf-fg-dim);
+}
+
+/* ----------------------------- forms ------------------------------ */
+
+.aw-field {
+  display: block;
+  margin: 0 0 0.9rem;
+}
+
+.aw-field--inline {
+  display: inline-block;
+  margin: 0;
+}
+
+.aw-field--grow {
+  flex: 1 1 18rem;
+}
+
+.aw-field__label {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.aw-field__hint {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--cf-fg-mute);
+  margin-bottom: 0.35rem;
+  max-width: 70ch;
+}
+
+.aw-field__input {
+  width: 100%;
+  max-width: 46rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--cf-bg-sunken);
+  color: var(--cf-fg);
+  border: 1px solid var(--cf-line-strong);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.aw-field__input:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 1px;
+}
+
+/* ----------------------------- actions ---------------------------- */
+
+.aw-action {
+  margin: 0 0 1.1rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  background: var(--cf-bg-raised);
+}
+
+.aw-action__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.aw-action__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.aw-action__summary,
+.aw-action__route {
+  margin: 0.4rem 0 0;
+  color: var(--cf-fg-dim);
+  font-size: 0.88rem;
+}
+
+.aw-action__consequences,
+.aw-danger__consequences {
+  margin: 0.8rem 0;
+  padding-left: 1.15rem;
+  max-width: 74ch;
+}
+
+.aw-action__consequences li,
+.aw-danger__consequences li {
+  margin-bottom: 0.35rem;
+}
+
+/* Not a disabled button. A disabled control reads as "not yet" and gets clicked at; the reason
+   takes its place instead. See src/lib/catalogue.ts. */
+.aw-action__blocked {
+  color: var(--cf-warn);
+  font-size: 0.84rem;
+  max-width: 34ch;
+}
+
+.aw-action__why,
+.aw-danger__why {
+  margin: 0;
+  color: var(--cf-warn);
+  font-size: 0.84rem;
+}
+
+/* ----------------------------- the gap (§3.3g) -------------------- */
+
+.aw-blocked {
+  margin: 1rem 0 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  background: var(--cf-bg-sunken);
+}
+
+.aw-blocked__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.aw-blocked__summary {
+  margin: 0.35rem 0 0.7rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.9rem;
+}
+
+.aw-blocked__verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.9rem;
+  font-size: 0.88rem;
+}
+
+.aw-blocked__badge {
+  border: 1px solid var(--cf-danger);
+  color: var(--cf-danger);
+  border-radius: 4px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.aw-blocked__reason {
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--cf-danger);
+  background: var(--cf-bg-raised);
+  border-radius: 0 6px 6px 0;
+}
+
+.aw-blocked__reason-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+.aw-blocked__reason p,
+.aw-blocked__aside {
+  margin: 0;
+  font-size: 0.86rem;
+  max-width: 78ch;
+}
+
+.aw-blocked__aside {
+  margin-top: 0.9rem;
+  color: var(--cf-fg-dim);
+}
+
+/* ----------------------------- the irreversible gate -------------- */
+
+.aw-danger {
+  margin: 0 0 1.25rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--cf-danger);
+  border-radius: 10px;
+  background: var(--cf-bg-raised);
+}
+
+.aw-danger__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.4rem;
+  font-size: 1.02rem;
+  color: var(--cf-danger);
+}
+
+.aw-danger__summary {
+  margin: 0;
+  max-width: 74ch;
+}
+
+.aw-danger__phrase {
+  background: var(--cf-bg-sunken);
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+}
+
+.aw-danger__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.aw-btn--danger {
+  border-color: var(--cf-danger);
+  color: var(--cf-danger);
+}
+
+.aw-btn--danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.aw-recap {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--cf-bg-sunken);
+  border-radius: 8px;
+}
+
+.aw-recap__line {
+  margin: 0 0 0.25rem;
+}
+
+.aw-recap__label {
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aw-decisions {
+  display: grid;
+  gap: 1rem;
+}
+
+/* ----------------------------- the audit preview ------------------ */
+
+.aw-audit-preview {
+  margin: 0.9rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--cf-line-strong);
+  border-radius: 8px;
+  background: var(--cf-bg-sunken);
+}
+
+.aw-audit-preview__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+.aw-audit-preview__lede {
+  margin: 0 0 0.7rem;
+  font-size: 0.84rem;
+  color: var(--cf-fg-dim);
+  max-width: 74ch;
+}
+
+.aw-audit-preview__list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.aw-audit-preview__action {
+  margin: 0 0 0.3rem;
+  font-weight: 700;
+}
+
+.aw-audit-preview__notes {
+  margin: 0.4rem 0 0;
+  padding-left: 1.05rem;
+  font-size: 0.82rem;
+  color: var(--cf-fg-dim);
+  max-width: 74ch;
+}
+
+/* ----------------------------- chain breaks ----------------------- */
+
+.aw-breaks {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.aw-breaks__item {
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) minmax(5rem, auto) 1fr;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--cf-danger);
+  background: var(--cf-bg-sunken);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 46rem) {
+  .aw-breaks__item {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
+.aw-breaks__kind {
+  font-weight: 700;
+  color: var(--cf-danger);
+}
+
+.aw-breaks__seq {
+  color: var(--cf-fg-mute);
+}
+
+/* A quiet button is still a button: same hit area, lower emphasis. */
+.cf-btn--quiet {
+  opacity: 0.85;
+}
