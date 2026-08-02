@@ -46,6 +46,7 @@ const actions = read('src/pages/actions.tsx')
 const audit = read('src/pages/audit.tsx')
 const flags = read('src/pages/flags.tsx')
 const broadcasts = read('src/pages/broadcasts.tsx')
+const support = read('src/pages/support.tsx')
 const irreversible = read('src/components/irreversible.tsx')
 const auditPreview = read('src/components/audit-preview.tsx')
 const tone = read('src/components/tone.tsx')
@@ -60,6 +61,7 @@ const PAGES: ReadonlyArray<[string, string]> = [
   ['audit', audit],
   ['flags', flags],
   ['broadcasts', broadcasts],
+  ['support', support],
 ]
 
 /* ══════════════════ the audit is shown before the action ══════════════════ */
@@ -359,9 +361,72 @@ describe('degradation is rendered, never a blank page', () => {
       ['audit', audit],
       ['flags', flags],
       ['broadcasts', broadcasts],
+      ['support', support],
     ] as const) {
       assert.match(source, /state === 'empty'/, `${name} has no empty state`)
     }
+  })
+})
+
+/* ══════════════════ the support page ══════════════════ */
+
+describe('the support page — 05 journey 16, and 17 §7 claim 9', () => {
+  it('asks BOTH questions the audit route can answer about a user', () => {
+    // "Everything about this user" is two equality filters and there is no OR between them. A
+    // screen that asked only `actor` would omit every refund, reversal and moderation decision
+    // taken about the user by somebody else, which is most of what a balance dispute turns on.
+    assert.match(support, /loadAudit\(\{ actor: `user:\$\{userId\}`/)
+    assert.match(support, /loadAudit\(\{ subjectKind: 'user', subjectId: userId/)
+  })
+
+  it('takes a user id, and sends a correlation id to the screen that already reads one', () => {
+    assert.match(support, /User id/)
+    // The pivot is the whole point: user → threads → the audit screen.
+    assert.match(support, /to=\{`\/audit\?correlationId=\$\{encodeURIComponent/)
+  })
+
+  it('re-asks the question when the user changes', () => {
+    // Without the id in the dependency array a second lookup renders the FIRST user's history
+    // under the second user's id — the wrong person's money with the right name on it.
+    assert.match(support, /\[userId\],\s*\)/)
+  })
+
+  it('renders the coverage panel on the EMPTY result, not only on a populated one', () => {
+    // An empty timeline here almost certainly means the money services do not mirror, not that
+    // the user did nothing. The caveat is worth least where it is easiest to omit.
+    const empty = support.indexOf("state === 'empty'")
+    const panel = support.indexOf('<CoveragePanel rows={[]} />')
+    assert.ok(empty > 0 && panel > empty, 'the empty state does not render the coverage panel')
+  })
+
+  it('states that nothing mirrors, rather than presenting admin-api rows as a full history', () => {
+    assert.match(support, /No other service mirrors/)
+    assert.match(support, /anyServiceMirrors/)
+  })
+
+  it('offers NO control that acts', () => {
+    // Every remedy 05's operator journeys reach for is a two-operator action, and two of the three
+    // have no route on admin-api at all. A support screen with a shortcut around the approval
+    // queue would be the console offering a button the backend refuses.
+    const source = withoutComments(support)
+    assert.doesNotMatch(source, /useMutation/, 'the support screen must not mutate')
+    assert.doesNotMatch(source, /ReversibleAction|Irreversible/, 'the support screen must not act')
+  })
+
+  it('never renders an absent amount as a zero', () => {
+    // `BigInt('')` is `0n`. The screen must go through `amountOf`, which refuses anything that is
+    // not a well-formed decimal integer, and render the null as an absence.
+    assert.match(support, /amountOf\(event\.payload\)/)
+    assert.match(support, /amount === null/)
+    assert.match(support, /no amount recorded/)
+    assert.doesNotMatch(withoutComments(support), /BigInt\(/, 'the page must not coerce money itself')
+  })
+
+  it('names the missing routes by path:line rather than describing them in prose', () => {
+    // A route taken from prose is a route that has not been checked. Each of the five questions
+    // 05 journey 16 asks names the provider route that would answer it, cited.
+    assert.match(support, /ledger\/src\/server\.ts:499/)
+    assert.match(support, /ledger\/src\/server\.ts:369/)
   })
 })
 

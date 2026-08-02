@@ -222,7 +222,19 @@ describe('auth callback', () => {
     // The ORDER is the assertion. Reverse the two side effects in @cloudsforge/ui and this fails.
     assert.equal(browser.trace[0], 'replaceState:/reports?tab=1#view=grid')
     assert.ok(browser.trace[1]?.startsWith('fetch:'))
-    assert.ok(browser.trace[1]?.includes('/auth/exchange'))
+    // ── The route this asserted was FICTIONAL, and the assertion is why nobody noticed.
+    //
+    // It read `/auth/exchange`, which `micro-identity` has never served. Identity mints a hand-off
+    // code with `POST /auth/handoff` and spends one with `POST /auth/handoff/redeem`
+    // (identity/src/server.ts:1076 and :1084, the latter also in the throttle table at :410) —
+    // both re-read in the source rather than taken from this comment's predecessor.
+    //
+    // This is the defect class docs/ecosystem/14 §11 names: the client was written to post to
+    // `/auth/exchange`, and the test asserted that the client posts to `/auth/exchange`. A stub
+    // answers whatever it is asked, so the pair agreed with each other and disagreed with
+    // identity, and every SSO callback in the estate 404'd. `micro-ui` corrected the client
+    // (`packages/ui/src/index.tsx`, IDENTITY_AUTH_ROUTES) and this assertion followed it here.
+    assert.ok(browser.trace[1]?.includes('/auth/handoff/redeem'))
 
     // The rest of the fragment survives: an app may keep its own route there.
     assert.deepEqual(browser.replaced, ['/reports?tab=1#view=grid'])

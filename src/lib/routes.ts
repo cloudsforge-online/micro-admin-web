@@ -39,6 +39,11 @@ export const ROUTES: readonly ConsoleRoute[] = [
   // closes.
   { path: 'actions', label: 'Actions', wildcard: false },
   { path: 'audit', label: 'Audit', wildcard: false },
+  // The support lookup — 05 journey 16, and the evidence 17 §7 claim 9 is measured by. It sits
+  // beside Audit because the two are halves of one workflow: this screen turns a USER into the
+  // correlation ids their history hangs off, and Audit reads one of those threads. The pivot is
+  // the half that did not exist, and it is why this is not a second copy of the audit screen.
+  { path: 'support', label: 'Support', wildcard: false },
   // The engagement treasury — docs/ecosystem/21 §6. The owner's requirement was that this be
   // "manageable from the admin panel", so the caps are here rather than only in curl. The screen
   // is a VIEW of the actions, never the mechanism: §6 is explicit that the catalogue remains

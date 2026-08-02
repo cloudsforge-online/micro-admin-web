@@ -121,6 +121,7 @@ shape (see below), so its `auth.tsx` is dropped in favour of this one rather tha
 | `/approvals/:id` | Should I approve this, and what will it record? | `GET /v1/approvals/:id`, `POST /v1/approvals/:id/decision` |
 | `/actions` | What can be asked for — and what cannot | `GET /v1/actions`, `POST /v1/approvals` |
 | `/audit` | What happened, and does the chain hold? | `GET /v1/audit`, `GET /v1/audit/verify` |
+| `/support` | Where did this user's money go? | `GET /v1/audit` ×2 — `actor=user:<id>`, and `subjectKind=user&subjectId=<id>` |
 | `/flags` | What is switched on | `GET /v1/flags`, `PUT /v1/flags/:key` |
 | `/broadcasts` | What the estate is telling everyone | `GET /v1/broadcasts`, `POST /v1/broadcasts`, `DELETE /v1/broadcasts/:id` |
 
@@ -214,6 +215,61 @@ the brand test passes against the source tree. Reported to `micro-web-template`;
 
 ---
 
+## The operator journeys, and what each still needs
+
+`docs/ecosystem/05-user-journeys.md` Part 3 is four operator journeys, and `22-browser-journeys.md`
+§8.4 records that this console had a screen for none of them. `/support` is journey 16. The other
+three are **not built, and no stub stands in for them**, because the data each needs is not exposed
+by any route on `admin-api` — and a screen that renders an explanation instead of a withdrawal
+queue is a screen an operator opens during an incident and cannot use.
+
+**Every route named below was read in the provider's source and is cited by `path:line`.** A route
+taken from prose is a route that has not been checked; this estate has shipped six clients against
+imagined surfaces, one of which 403'd every marketplace listing for as long as it lived.
+
+| Journey | The data exists at | What `admin-api` must add |
+| --- | --- | --- |
+| **13** — a stuck withdrawal | `GET /v1/outbound?state=stuck` (`settlement/src/server.ts:495`, defaults to `stuck`, admin user **or** service with the read scope) · `GET /v1/outbound/:id` (`:521`) · `GET /v1/chains/:chain/:network/in-flight` (`:533`) — Chain Health, one row or none by construction | a settlement client and `GET /v1/settlement/outbound`. **`micro-admin-api` has no settlement upstream at all** (`upstreams.ts` has ledger, market and billing only) |
+| **13** — the remedy | `POST /v1/outbound/:id/adjudicate` (`settlement/src/server.ts:558`), `action: 'refund' \| 'confirm'` | a **catalogue action**, not a proxy. See the asymmetry below |
+| **14** — reconciliation drift | `GET /reconciliation` (`ledger/src/server.ts:528`, scope `ledger:read`) returns `runs` **and** `freezes` — `latestRuns`/`listFreezes`, `ledger/src/reconcile.ts:202` and `:173` | one method on the **existing** ledger client (`upstreams.ts:250`) and `GET /v1/reconciliation`. This is the cheapest of the four: the client, the token and the scope are already there |
+| **15** — a fraudulent listing | `GET /v1/moderation/cases` (`market/src/server.ts:1112`) · computed risk indicators, `market/src/risk.ts:67` | `admin-api` **already calls `openCases`** and throws the result away — `estate.ts:175-182` keeps only `count`. The list needs a route; the resolve action already exists and is two-operator |
+| **16** — a balance question | `GET /accounts/:subject/balances` (`ledger/src/server.ts:499`) · `GET /entries?correlationId=` (`ledger/src/server.ts:369`) | both are on the ledger client's route table already; neither is reachable from a browser. `balancesForSubject` is exposed only for engagement subjects (`server.ts:1046`) |
+
+### The one asymmetry worth stating before anybody builds journey 13
+
+`POST /v1/outbound/:id/adjudicate` requires **one** administrator (`requireAdmin`, and deliberately
+no service path — "a settlement decision taken by a machine on a schedule is the thing `stuck`
+exists to prevent"). 05:416 requires **two**: *"Abandon requires a reason code and dual approval,
+and produces an audit event, not a log line."*
+
+Those disagree, and the console must not resolve it by adding a button. A refund adjudication
+credits a user's balance back **while a valid signature for the same money is sitting in `raw_tx`**
+— which is why it belongs in the approval queue as `settlement.outbound.adjudicate`, alongside
+`ledger.entry.reverse`, rather than behind a proxy route that would let one operator do it. The
+queue is what supplies the second signature settlement itself does not demand. That is the same
+shape as the engagement treasury's missing raise button: the UI reflects the real authority model,
+and where the model and the document disagree it takes the stricter one and says so.
+
+### Why the audit mirror makes all of this narrower than it looks
+
+`/support` reads a log that, in a real deployment, contains **only `admin-api`'s own rows**.
+
+17 §2 requires every service to write an audit event for each privileged action "mirrored to
+`admin-api`" (`17-definition-of-done.md:87-88`). The intake is built and correctly guarded:
+`POST /v1/events` verifies a signature over the exact bytes **before** parsing them, demands the
+exact `admin:audit:write` scope, dedupes on the envelope id, and takes `source` from the
+authenticated sender rather than the payload. What does not exist is a **producer**. The topic it
+consumes is `*.audit.recorded` (`admin-api/src/server.ts:132`), and that string appears in exactly
+one place in the entire estate: that line. `admin-api/README.md:367-368` records the same finding.
+
+So 17 §7 claim 9 — *"an operator answers 'where did this user's money go' from `admin-web` alone,
+by correlation id"* — is **not** met today, and adding the five routes above would not by itself
+meet it either: the audit rows that join them are not being produced. `/support` says this on the
+page, on every result **including the empty one**, because an empty timeline there is far more
+likely to mean "the money services do not mirror" than "this user did nothing".
+
+---
+
 ## Defects found in repositories this one does not own
 
 Reported, not fixed.
@@ -222,6 +278,7 @@ Reported, not fixed.
 | --- | --- |
 | ~~`micro-web-template`, and `hub-web`, `site`, `foresight-web`, `foresight-admin-web`~~ **fixed** — and `emberkin-web`, which the original report missed | `src/lib/auth.tsx` declared `interface Me { handle?, roles? }` and reads them off the top level of `/auth/me`. Identity nests them under `user` (`identity/src/server.ts:891-903`, `identity/src/users.ts:52-63`). `roles` is therefore always null, `isAdmin` in the company bar is always false, and the switcher hides the three `adminOnly` entries — including this console — from every signed-in operator. Read correctly here; see `src/lib/auth.tsx` and `test/auth.test.ts`. |
 | ~~`micro-web-template`~~ **fixed**, along with `market-web`, `foresight-web`, `foresight-admin-web` and `status-web`, which were the ones actually affected | The `Dockerfile` never copied `public/` into the build context, so `dist/` in the built image contains no favicon. `test/brand-chrome.test.ts` reads the source tree and passes regardless. §3.3e one layer down. |
+| ~~`micro-ui`~~ **fixed there, and followed here** | `consumeAuthCallback` posted the SSO hand-off code to `/auth/exchange`, which `micro-identity` has never served — it mints with `POST /auth/handoff` and spends with `POST /auth/handoff/redeem` (`identity/src/server.ts:1076` and `:1084`). Every SSO callback in the estate 404'd. `test/api.test.ts:225` in **this** repository asserted the same fictional path, so the client and its test agreed with each other and disagreed with identity — 14 §11's defect class exactly, and the reason nobody noticed. Corrected here to the real route, with the citation. |
 | ~~`micro-ui`~~ **fixed** | `surfaces.ts` gave `admin` devPort 3002; `admin-api` binds 4014. Production is unaffected (same origin); `pnpm dev` resolves to a port with nothing on it. The same class as the foresight 4021/4011 collision that repository already fixed once. |
 
 Nothing was found wrong in `admin-api` itself. Two things about it are worth stating positively,

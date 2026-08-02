@@ -34,6 +34,7 @@ import { EstatePage } from './pages/estate.tsx'
 import { EngagementPage } from './pages/engagement.tsx'
 import { FlagsPage } from './pages/flags.tsx'
 import { NotFoundPage } from './pages/not-found.tsx'
+import { SupportPage } from './pages/support.tsx'
 
 export function App() {
   const placement = currentPlacement()
@@ -81,6 +82,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <AuditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="support"
+              element={
+                <ProtectedRoute>
+                  <SupportPage />
                 </ProtectedRoute>
               }
             />
