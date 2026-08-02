@@ -208,19 +208,26 @@ export interface Broadcast {
  */
 export const ADMIN_ROUTES: Readonly<Record<string, { method: string; line: number }>> =
   Object.freeze({
-    '/v1/estate': { method: 'GET', line: 879 },
-    '/v1/actions': { method: 'GET', line: 609 },
-    '/v1/approvals': { method: 'GET', line: 623 },
-    '/v1/approvals/:id': { method: 'GET', line: 637 },
-    '/v1/approvals#post': { method: 'POST', line: 645 },
-    '/v1/approvals/:id/decision': { method: 'POST', line: 709 },
-    '/v1/audit': { method: 'GET', line: 557 },
-    '/v1/audit/verify': { method: 'GET', line: 579 },
-    '/v1/flags': { method: 'GET', line: 774 },
-    '/v1/flags/:key': { method: 'PUT', line: 780 },
-    '/v1/broadcasts': { method: 'GET', line: 811 },
-    '/v1/broadcasts#post': { method: 'POST', line: 827 },
-    '/v1/broadcasts/:id': { method: 'DELETE', line: 864 },
+    // Re-read against admin-api at 25beaea+bc88503, when the engagement routes shifted every
+    // line below them. A citation that has drifted is worse than none: it is checkable, and it
+    // checks out against the wrong thing.
+    '/v1/estate': { method: 'GET', line: 1075 },
+    '/v1/actions': { method: 'GET', line: 638 },
+    '/v1/approvals': { method: 'GET', line: 652 },
+    '/v1/approvals/:id': { method: 'GET', line: 666 },
+    '/v1/approvals#post': { method: 'POST', line: 674 },
+    '/v1/approvals/:id/decision': { method: 'POST', line: 786 },
+    '/v1/audit': { method: 'GET', line: 586 },
+    '/v1/audit/verify': { method: 'GET', line: 608 },
+    '/v1/flags': { method: 'GET', line: 851 },
+    '/v1/flags/:key': { method: 'PUT', line: 857 },
+    '/v1/broadcasts': { method: 'GET', line: 888 },
+    '/v1/broadcasts#post': { method: 'POST', line: 904 },
+    '/v1/broadcasts/:id': { method: 'DELETE', line: 941 },
+    // The engagement treasury — docs/ecosystem/21 §6.
+    '/v1/engagement/policies': { method: 'GET', line: 956 },
+    '/v1/engagement/policies/:service': { method: 'PUT', line: 984 },
+    '/v1/engagement/report': { method: 'GET', line: 1046 },
   })
 
 /**
@@ -579,4 +586,121 @@ export function retractBroadcast(id: string, opts: Signal = {}): Promise<{ broad
     ...withSignal(opts),
     method: 'DELETE',
   })
+}
+
+/* ══════════════════════════ the engagement treasury — docs/ecosystem/21 ══════════════════════ */
+
+/** `admin-api/src/engagement.ts` — amounts are DECIMAL STRINGS on the wire, never JSON numbers. */
+export interface EngagementPolicy {
+  readonly service: string
+  readonly transferCapShards: string
+  readonly seedPerMarketWei: string | null
+  readonly seedPerDayWei: string | null
+  readonly lastChangeApprovalId: string | null
+  readonly updatedAt: string
+  readonly updatedBy: string
+}
+
+export interface FeeRecyclePolicy {
+  readonly recycleBps: number
+  readonly lastChangeApprovalId: string | null
+  readonly updatedAt: string | null
+  readonly updatedBy: string | null
+}
+
+/** The schema ceilings, served so this console renders the bounds rather than inventing them. */
+export interface EngagementCeilings {
+  readonly transferCapShards: string
+  readonly seedPerMarketWei: string
+  readonly seedPerDayWei: string
+  readonly feeRecycleBps: number
+}
+
+export interface EngagementPolicies {
+  readonly policies: readonly EngagementPolicy[]
+  readonly feeRecycle: FeeRecyclePolicy
+  readonly ceilings: EngagementCeilings
+}
+
+export interface AccountBalance {
+  readonly subject: string
+  readonly assetCode: string
+  readonly purpose: string
+  readonly type: string
+  readonly status: string
+  readonly amount: string
+}
+
+export interface EngagementTransfer {
+  readonly id: string
+  readonly service: string
+  readonly amountShards: string
+  readonly approvalId: string
+  readonly ledgerEntryId: string | null
+  readonly state: 'posting' | 'posted'
+  readonly createdAt: string
+  readonly postedAt: string | null
+}
+
+export interface EngagementReport {
+  readonly treasury: { readonly subject: string; readonly balances: readonly AccountBalance[] }
+  readonly services: ReadonlyArray<{
+    readonly service: string
+    readonly subject: string
+    readonly balances: readonly AccountBalance[]
+  }>
+  readonly spendShardsByService: Readonly<Record<string, string>>
+  readonly transfers: readonly EngagementTransfer[]
+  readonly policies: readonly EngagementPolicy[]
+  readonly feeRecycle: FeeRecyclePolicy
+}
+
+/**
+ * The caps and the ceilings. `GET /v1/engagement/policies` — **admin-api/src/server.ts:956**.
+ * `requireReader` (server.ts:481), so an operator's own token is enough.
+ */
+export function loadEngagementPolicies(opts: Signal = {}): Promise<EngagementPolicies> {
+  return api<EngagementPolicies>('/v1/engagement/policies', withSignal(opts))
+}
+
+/**
+ * Balances and spend, read off the ledger. `GET /v1/engagement/report` —
+ * **admin-api/src/server.ts:1046**. This is 21 §6's third action, whose approval column reads
+ * "none (read)": the approval queue REFUSES `engagement.report` and names this route, so the
+ * console calls it directly rather than spending two operators' signatures on a read.
+ */
+export function loadEngagementReport(opts: Signal = {}): Promise<EngagementReport> {
+  return api<EngagementReport>('/v1/engagement/report', withSignal(opts))
+}
+
+/**
+ * **LOWER** a cap. `PUT /v1/engagement/policies/:service` — **admin-api/src/server.ts:984**.
+ *
+ * One operator, deliberately, and only downwards: `micro-devplatform`'s quota asymmetry
+ * (`devplatform/src/server.ts:981`, "the direction is the authority"). Lowering narrows the blast
+ * radius and is the operator doing the platform's work for it; RAISING is the abuse, and this
+ * route answers **403 `raise_needs_approval`** for one — the caller must go through
+ * `engagement.policy.set` in the approval queue instead, which needs two operators. The
+ * `engagement_raise_needs_approval` trigger says the same thing in the schema, so a raise cannot
+ * arrive by any other door either.
+ *
+ * `:service` may be `platform`, which addresses the fee-recycle percentage rather than a
+ * per-service cap.
+ */
+export interface PolicyLowerInput {
+  readonly transferCapShards?: string
+  readonly seedPerMarketWei?: string | null
+  readonly seedPerDayWei?: string | null
+  readonly recycleBps?: string
+}
+
+export function lowerEngagementPolicy(
+  service: string,
+  input: PolicyLowerInput,
+  opts: Signal = {},
+): Promise<{ policy?: EngagementPolicy; feeRecycle?: FeeRecyclePolicy }> {
+  return api<{ policy?: EngagementPolicy; feeRecycle?: FeeRecyclePolicy }>(
+    `/v1/engagement/policies/${encodeURIComponent(service)}`,
+    { ...withSignal(opts), method: 'PUT', body: { ...input } },
+  )
 }

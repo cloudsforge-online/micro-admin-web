@@ -31,6 +31,7 @@ import { ApprovalsPage } from './pages/approvals.tsx'
 import { AuditPage } from './pages/audit.tsx'
 import { BroadcastsPage } from './pages/broadcasts.tsx'
 import { EstatePage } from './pages/estate.tsx'
+import { EngagementPage } from './pages/engagement.tsx'
 import { FlagsPage } from './pages/flags.tsx'
 import { NotFoundPage } from './pages/not-found.tsx'
 
@@ -80,6 +81,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <AuditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="engagement"
+              element={
+                <ProtectedRoute>
+                  <EngagementPage />
                 </ProtectedRoute>
               }
             />

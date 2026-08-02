@@ -39,6 +39,11 @@ export const ROUTES: readonly ConsoleRoute[] = [
   // closes.
   { path: 'actions', label: 'Actions', wildcard: false },
   { path: 'audit', label: 'Audit', wildcard: false },
+  // The engagement treasury — docs/ecosystem/21 §6. The owner's requirement was that this be
+  // "manageable from the admin panel", so the caps are here rather than only in curl. The screen
+  // is a VIEW of the actions, never the mechanism: §6 is explicit that the catalogue remains
+  // fully operable without it.
+  { path: 'engagement', label: 'Engagement', wildcard: false },
   { path: 'flags', label: 'Flags', wildcard: false },
   { path: 'broadcasts', label: 'Broadcasts', wildcard: false },
 ]

@@ -388,3 +388,37 @@ export function idempotencyKeyFor(scope: string, subject: string, mintedAt: numb
   // the route answers 400 for, which would read to an operator as "the form is broken".
   return key.length >= 8 ? key.slice(0, 200) : `${key}-padded-to-length`
 }
+
+/**
+ * The audit row a cap LOWERING will write — docs/ecosystem/21 §7.7.
+ *
+ * Lowering is the only direction this console can take on its own. Raising is
+ * `engagement.policy.set` through the approval queue, and both `admin-api`'s route and the
+ * `engagement_raise_needs_approval` trigger refuse a raise that arrives any other way. The notes
+ * say so, because the asymmetry is the thing an operator most needs to know BEFORE they lower: a
+ * lowering is easy and undoing one is not.
+ */
+export function previewEngagementLower(input: {
+  actor: string | null
+  service: string
+  what: string
+  from: string
+  to: string
+}): AuditPreview {
+  return {
+    actor: input.actor ?? UNKNOWN_ACTOR,
+    action:
+      input.service === 'platform'
+        ? 'admin.engagement.recycle.lowered'
+        : 'admin.engagement.policy.lowered',
+    subjectKind: 'engagement_policy',
+    subjectId: input.service === 'platform' ? 'fee-recycle' : input.service,
+    outcome: 'allowed',
+    reasonCode: null,
+    notes: [
+      `The row records ${input.what} BEFORE and AFTER, so the record will say it was ${input.from} until now rather than only that it is ${input.to}.`,
+      'Lowering takes one operator. RAISING it back takes two, through engagement.policy.set in the approval queue — so this is easy to do and deliberately harder to undo.',
+      'The cap in the schema is what actually refuses an over-cap transfer, so this takes effect for every write path at once, not only for this console.',
+    ],
+  }
+}

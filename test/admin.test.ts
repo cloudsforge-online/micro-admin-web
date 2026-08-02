@@ -35,8 +35,11 @@ import {
   loadApprovals,
   loadAudit,
   loadBroadcasts,
+  loadEngagementPolicies,
+  loadEngagementReport,
   loadEstate,
   loadFlags,
+  lowerEngagementPolicy,
   publishBroadcast,
   requestApproval,
   retractBroadcast,
@@ -534,8 +537,9 @@ describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts:864', () => {
 describe('the set of routes this bundle can reach', () => {
   const SOURCE = readFileSync(new URL('../src/lib/admin.ts', import.meta.url), 'utf8')
 
-  it('declares thirteen routes, which is what admin-api serves minus the ones we do not call', () => {
-    assert.equal(Object.keys(ADMIN_ROUTES).length, 13)
+  it('declares sixteen routes, which is what admin-api serves minus the ones we do not call', () => {
+    // Thirteen, plus the three engagement-treasury routes (docs/ecosystem/21 §6).
+    assert.equal(Object.keys(ADMIN_ROUTES).length, 16)
   })
 
   it('cites a line number in admin-api/src/server.ts for every one of them', () => {
@@ -561,6 +565,7 @@ describe('the set of routes this bundle can reach', () => {
         .replace(/\/v1\/approvals\/[^/]+$/, '/v1/approvals/:id')
         .replace(/\/v1\/broadcasts\/[^/]+$/, '/v1/broadcasts/:id')
         .replace(/\/v1\/flags\/[^/]+$/, '/v1/flags/:key')
+        .replace(/\/v1\/engagement\/policies\/[^/]+$/, '/v1/engagement/policies/:service')
       exercised.add(call.method === 'POST' && (generic === '/v1/approvals' || generic === '/v1/broadcasts') ? `${generic}#post` : generic)
     }
 
@@ -582,6 +587,9 @@ describe('the set of routes this bundle can reach', () => {
     await record(() => loadBroadcasts())
     await record(() => publishBroadcast({ severity: 'info', title: 't', body: 'b' }, KEY))
     await record(() => retractBroadcast(BROADCAST_ID))
+    await record(() => loadEngagementPolicies())
+    await record(() => loadEngagementReport())
+    await record(() => lowerEngagementPolicy('foresight', { transferCapShards: '100' }))
 
     assert.deepEqual([...exercised].sort(), Object.keys(ADMIN_ROUTES).sort())
   })
