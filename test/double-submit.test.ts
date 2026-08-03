@@ -213,6 +213,152 @@ for (const strict of [false, true]) {
         )
       })
     })
+
+    /*
+     * ── THE FOUR BELOW EXIST BECAUSE MUTATION TESTING FOUND THEM MISSING ────────────────────
+     *
+     * The scenarios above prove the guard. They did NOT prove anything else about the hook, and
+     * four separate mutations of `mutation.ts` survived the whole suite until these were added:
+     * a per-render latch box, a `busy` that never clears, a stale error that is never reset, and
+     * a successful `run` that answers `null`. Each is a real defect with a visible cost, and the
+     * suite was green against every one of them.
+     */
+
+    it(`the latch is the same one across a re-render mid-flight (${mode})`, async () => {
+      // A latch written as `{ current: false }` instead of `useRef` passes every same-tick proof
+      // above — both clicks come from ONE render's closure, so they share one box. It breaks the
+      // moment a render lands between the two events, which `setBusy(true)` guarantees will
+      // happen. So this presses again AFTER the busy render has committed, calling `run` the way
+      // a form's Enter key does rather than through a control the affordance has disabled.
+      const box = { runs: 0 }
+      let fire: (() => void) | null = null
+      const Probe = (): ReactElement => {
+        const m = useMutation(async () => {
+          box.runs += 1
+          await new Promise((r) => setTimeout(r, 60))
+          return 'done'
+        }, 'It did not work.')
+        fire = () => void m.run()
+        return h(
+          'div',
+          null,
+          h('button', { type: 'button', onClick: () => void m.run() }, 'Do the thing'),
+          h('p', null, m.busy ? 'Working…' : 'Idle, and long enough to clear the floor.'),
+        )
+      }
+
+      await withScreen(h(Probe), { url: ORIGIN, strict }, async (s) => {
+        await s.click(s.byRole('button', 'Do the thing'))
+        // The busy render has committed; the work has not finished.
+        assert.match(s.text(), /Working…/, 'the first run had already finished, so this proves nothing')
+        await s.settle(5)
+        ;(fire as unknown as () => void)()
+        await s.settle(120)
+        assert.equal(
+          box.runs,
+          1,
+          `a second run started while the first was still in flight (${box.runs} runs). The latch ` +
+            `is not stable across renders — a fresh box per render is not a latch.`,
+        )
+      })
+    })
+
+    it(`releases busy when the work finishes, so the control is usable again (${mode})`, async () => {
+      // `busy` is affordance rather than guard, which is not the same as saying it does not
+      // matter: never clearing it leaves every control on the console reading "Working…" and
+      // disabled for the life of the page.
+      const Probe = (): ReactElement => {
+        const m = useMutation(async () => {
+          await new Promise((r) => setTimeout(r, 20))
+          return 'done'
+        }, 'It did not work.')
+        return h(
+          'div',
+          null,
+          h('button', { type: 'button', disabled: m.busy, onClick: () => void m.run() }, 'Do the thing'),
+          h('p', null, m.busy ? 'Working…' : 'Idle, and long enough to clear the floor.'),
+        )
+      }
+
+      await withScreen(h(Probe), { url: ORIGIN, strict }, async (s) => {
+        await s.click(s.byRole('button', 'Do the thing'))
+        await s.settle(80)
+        assert.doesNotMatch(s.text(), /Working…/, 'busy never cleared: the control is stuck mid-flight')
+        assert.equal(
+          (s.byRole('button', 'Do the thing') as unknown as { disabled: boolean }).disabled,
+          false,
+          'the control is still disabled after the work finished',
+        )
+      })
+    })
+
+    it(`clears the previous attempt's error when a new one starts (${mode})`, async () => {
+      // Without `setError(null)` at the top of a run, a failure stays on screen underneath a
+      // subsequent success — the operator reads a red notice about work that then succeeded.
+      let fail = true
+      const Probe = (): ReactElement => {
+        const m = useMutation(async () => {
+          await new Promise((r) => setTimeout(r, 10))
+          if (fail) throw new Error('the upstream is unreachable')
+          return 'done'
+        }, 'It did not work.')
+        return h(
+          'div',
+          null,
+          h('button', { type: 'button', onClick: () => void m.run() }, 'Do the thing'),
+          h('p', null, m.error ? `Error: ${m.error.message}` : 'No error, and long enough to clear the floor.'),
+        )
+      }
+
+      await withScreen(h(Probe), { url: ORIGIN, strict }, async (s) => {
+        await s.click(s.byRole('button', 'Do the thing'))
+        await s.settle(40)
+        assert.match(s.text(), /Error:/, 'the first attempt did not report its failure at all')
+        fail = false
+        await s.click(s.byRole('button', 'Do the thing'))
+        await s.settle(40)
+        assert.doesNotMatch(
+          s.text(),
+          /Error:/,
+          "the previous attempt's error survived a successful retry — the operator is reading a " +
+            'failure notice about work that has since succeeded',
+        )
+      })
+    })
+
+    it(`answers the caller with the result, which is what every caller branches on (${mode})`, async () => {
+      // Every call site in this app reads `if (result !== null)` and only then navigates, reloads
+      // or clears the form. A `run` that answered `null` on success would leave the screen
+      // showing stale data after a write that worked, and no test above would notice.
+      const seen: unknown[] = []
+      const Probe = (): ReactElement => {
+        const m = useMutation(async () => {
+          await new Promise((r) => setTimeout(r, 10))
+          return { ok: true }
+        }, 'It did not work.')
+        return h(
+          'div',
+          null,
+          h(
+            'button',
+            { type: 'button', onClick: () => void m.run().then((r) => void seen.push(r)) },
+            'Do the thing',
+          ),
+          h('p', null, 'Idle, and long enough to clear the forty-character floor.'),
+        )
+      }
+
+      await withScreen(h(Probe), { url: ORIGIN, strict }, async (s) => {
+        await s.click(s.byRole('button', 'Do the thing'))
+        await s.settle(40)
+        assert.deepEqual(
+          seen,
+          [{ ok: true }],
+          'a successful run did not answer with its value, so every caller that branches on ' +
+            '`result !== null` silently stops navigating, reloading and clearing its form',
+        )
+      })
+    })
   })
 }
 
