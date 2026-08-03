@@ -8,6 +8,8 @@ enforces nothing: `admin-api` verifies the token and the `admin` role on every r
 (`requireOperator`, `admin-api/src/server.ts:443`), refuses a service token outright, and enforces
 the four-eyes control three separate times. **This console's job is to make all of that legible.**
 
+Design authority: [`ecosystem/22-browser-journeys.md`](https://github.com/cloudsforge-online/micro-docs/blob/main/ecosystem/22-browser-journeys.md)
+
 ---
 
 ## What the gateway must enforce
@@ -285,3 +287,10 @@ Nothing was found wrong in `admin-api` itself. Two things about it are worth sta
 because a reader may mistake them for gaps: `PUT /v1/flags/:key` and `DELETE /v1/broadcasts/:id`
 take **no** `Idempotency-Key`, and both exemptions are recorded with their reasons in
 `admin-api/src/routeidempotency.test.ts:32-39`. This client sends none for either, deliberately.
+
+---
+
+## Provenance
+
+The code in this repository was written by **Claude Opus 5** and **Claude Fable 5**, under
+human direction and review.
