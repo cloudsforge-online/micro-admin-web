@@ -2,7 +2,7 @@
  * Session state for the tree, the gate in front of every route, and WHO THE OPERATOR IS.
  *
  * Hiding a route is NOT the security boundary — `admin-api` verifies the token and the `admin`
- * role on the request itself (`requireOperator`, admin-api/src/server.ts:443, which also refuses
+ * role on the request itself (`requireOperator`, admin-api/src/server.ts:496, which also refuses
  * a service token outright). This exists so that a signed-out operator is sent to sign in instead
  * of being shown a screen made entirely of 401s, and so that the console knows which principal it
  * is acting as.

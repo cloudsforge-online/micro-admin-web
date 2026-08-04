@@ -29,7 +29,7 @@
  *
  * The gateway is the FIRST gate and this is the second; see the README for what the gateway must
  * enforce. Neither replaces `admin-api`'s own `requireOperator`
- * (`admin-api/src/server.ts:443`), which is the one that actually refuses.
+ * (`admin-api/src/server.ts:496`), which is the one that actually refuses.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
  * ── The dev port disagreement, reported and now fixed ──────────────────────────────────────────
@@ -55,11 +55,29 @@ import {
 /**
  * The surface this console IS, and whose API it calls.
  *
- * One key rather than foresight-admin-web's two: this console is served from `admin.<apex>` and
- * `admin-api` answers on the same origin, so the bar's current entry and the API host are the
- * same surface.
+ * One key for the console itself: it is served from `admin.<apex>` and `admin-api` answers on the
+ * same origin, so the bar's current entry and this console's own API host are the same surface.
  */
 export const PRODUCT: SurfaceKey = 'admin'
+
+/**
+ * The one OTHER service this console calls, and the only cross-origin API in the bundle.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE FORESIGHT SCREENS FOLDED IN HERE (P13) AND THEIR API DID NOT MOVE WITH THEM.
+ *
+ * `19-new-products.md:142` kept the Foresight operator panel as its own surface "for now … folded
+ * into `admin-web` (P13) when that exists — an operator UI must not share a bundle with an
+ * unauthenticated public page". `foresight-web` is that unauthenticated public page, so the panel
+ * could not live there; this console has no public page at all, which is why the fold lands here.
+ *
+ * What did NOT fold is the SERVICE. The idea queue, the market lifecycle and the allowlist are
+ * served by `micro-foresight` on `foresight.<apex>` — the same host `foresight-web` reads — and
+ * `admin-api` proxies none of it. So these screens call a second origin, and this is the only
+ * place in the bundle that does.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export const FORESIGHT_SURFACE: SurfaceKey = 'foresight'
 
 /** The name reported to the observability ingest and shown in error copy. */
 export const APP_NAME = 'admin-web'
@@ -164,6 +182,27 @@ export function hosts(): CloudsForgeHosts {
 export function apiBase(): string {
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   return resolveApiBase(origin, cloudsforgeHosts(), PRODUCT)
+}
+
+/**
+ * The base URL for `micro-foresight`. **Always absolute, deliberately never relative.**
+ *
+ * `resolveApiBase` is not used here, and that is the point rather than an omission. It returns the
+ * empty string when the page origin equals the surface's own — which for THIS pair would mean the
+ * console is being served from `foresight.<apex>`, the public product's origin. That is precisely
+ * the deployment `placement()` classifies as `public-origin` and `App` refuses to render at all.
+ *
+ * So a relative base here could only ever be produced in a state the bundle has already declined
+ * to run in, and returning one would be a silent second opinion about a question `placement` has
+ * answered. Reading the registry host unconditionally means the cross-origin call is the ONLY
+ * shape these requests ever take, which is also what makes it assertable in a test rather than
+ * dependent on where the suite pretends to be served from.
+ *
+ * Called per request, like `apiBase()`: `cloudsforgeHosts()` reads `window.location.hostname`
+ * every time, and a module constant would freeze the apex at import.
+ */
+export function foresightApiBase(): string {
+  return cloudsforgeHosts()[FORESIGHT_SURFACE]
 }
 
 /** The page origin, or a stable placeholder when there is no document (tests, prerender). */

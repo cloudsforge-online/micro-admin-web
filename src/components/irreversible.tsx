@@ -30,7 +30,7 @@ export function IrreversibleAction({
   label,
   summary,
   consequences,
-  previews,
+  previews = [],
   phrase,
   rationaleLabel,
   rationaleHint,
@@ -44,9 +44,15 @@ export function IrreversibleAction({
   summary: string
   /** What it will do, in sentences, shown BEFORE the control. */
   consequences: readonly string[]
-  /** The audit rows this writes. The operator signs for a record they have read. */
-  previews: readonly AuditPreview[]
-  /** The exact words the operator must write. `confirmationPhrase()` builds it. */
+  /**
+   * The audit rows this writes. The operator signs for a record they have read.
+   *
+   * Defaults to none, for the Foresight actions folded in at P13: those run against
+   * `micro-foresight` and write no `admin-api` audit row at all, so they say what foresight
+   * records in their own words instead. See the note in components/audit-preview.tsx.
+   */
+  previews?: readonly AuditPreview[]
+  /** The exact words the operator must write. A `*ConfirmationPhrase()` builds it. */
   phrase: string
   rationaleLabel: string
   rationaleHint: string
@@ -154,7 +160,7 @@ export function ReversibleAction({
   label,
   summary,
   consequences,
-  previews,
+  previews = [],
   runLabel,
   blocked = null,
   busy = false,
@@ -165,7 +171,8 @@ export function ReversibleAction({
   label: string
   summary: string
   consequences: readonly string[]
-  previews: readonly AuditPreview[]
+  /** See `IrreversibleAction`. Defaults to none for an action that writes no admin-api row. */
+  previews?: readonly AuditPreview[]
   runLabel: string
   /** Set when the action is not available at all: the reason, in the operator's words. */
   blocked?: string | null

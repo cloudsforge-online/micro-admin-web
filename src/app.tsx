@@ -9,7 +9,7 @@
  *
  * This console has no public page: every screen reads or writes something only an operator may
  * touch, and `admin-api` verifies the token and the `admin` role on the request itself
- * (`requireOperator`, admin-api/src/server.ts:443 — which also refuses a service token outright,
+ * (`requireOperator`, admin-api/src/server.ts:496 — which also refuses a service token outright,
  * because approval is consent given by a person and a service is not a person). The gate here
  * exists so that a signed-out operator is sent to sign in instead of being shown a screen made
  * entirely of 401s.
@@ -23,6 +23,7 @@
  */
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/shell.tsx'
+import { ForesightSection } from './components/foresight-section.tsx'
 import { AuthProvider, ProtectedRoute } from './lib/auth.tsx'
 import { currentPlacement } from './lib/hosts.ts'
 import { ActionsPage } from './pages/actions.tsx'
@@ -35,6 +36,10 @@ import { EngagementPage } from './pages/engagement.tsx'
 import { FlagsPage } from './pages/flags.tsx'
 import { NotFoundPage } from './pages/not-found.tsx'
 import { SupportPage } from './pages/support.tsx'
+import { CategoriesPage } from './pages/foresight/categories.tsx'
+import { MarketPage } from './pages/foresight/market.tsx'
+import { MarketsPage } from './pages/foresight/markets.tsx'
+import { QueuePage } from './pages/foresight/queue.tsx'
 
 export function App() {
   const placement = currentPlacement()
@@ -117,6 +122,69 @@ export function App() {
                 </ProtectedRoute>
               }
             />
+            {/*
+              ── The Foresight operator panel, folded in at P13 ──────────────────────────────
+
+              A NESTED route, so `ForesightSection` renders the section's own navigation once and
+              the four screens render into its outlet — rather than four sibling routes each
+              re-rendering the same nav.
+
+              **Every one of them is individually behind `ProtectedRoute`, and the layout is too.**
+              Wrapping only the layout would look sufficient and would not be: the gate decides
+              what to RENDER, and a child route renders inside a parent that has already returned
+              its children. Wrapping only the children would leave the section's nav visible to a
+              signed-out browser. Neither is a security boundary in any case — foresight verifies
+              the token and the `admin` role on every one of these routes itself, in
+              `requireAdmin(await authenticate(...))` at foresight/src/server.ts:649, 660, 681,
+              704, 714, 732, 772, 859, 899, 927, 957 and 976 — but a console that shows a
+              signed-out operator a screen made entirely of 401s has failed at its own job.
+            */}
+            <Route
+              path="foresight"
+              element={
+                <ProtectedRoute>
+                  <ForesightSection />
+                </ProtectedRoute>
+              }
+            >
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <QueuePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="markets"
+                element={
+                  <ProtectedRoute>
+                    <MarketsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="markets/:id"
+                element={
+                  <ProtectedRoute>
+                    <MarketPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="categories"
+                element={
+                  <ProtectedRoute>
+                    <CategoriesPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* An unknown address under /foresight is still an unknown address. Without this it
+                  would match the section index and quietly render the idea queue at, say,
+                  /foresight/marketz — a 200 for a route that does not exist, which is the whole
+                  thing nginx.conf's enumeration exists to prevent, reintroduced in the router. */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
             {/* Unknown paths render inside the shell, so the operator keeps the navigation they
                 need to get back out — under a real 404, which nginx.conf preserves. */}
             <Route path="*" element={<NotFoundPage />} />

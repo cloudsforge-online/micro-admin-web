@@ -250,3 +250,209 @@ export function shortHash(hash: string | null): string {
   if (hash === null || hash.length === 0) return '—'
   return hash.length <= 20 ? hash : `${hash.slice(0, 10)}…${hash.slice(-6)}`
 }
+
+/* ══════════════════════════ the Foresight screens (P13, folded in) ══════════════════════════ */
+
+/**
+ * Everything below serves the Foresight operator screens, which moved into this console at P13.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ── MONEY IS A STRING ALL THE WAY TO THE DOM ─────────────────────────────────────────────────
+ *
+ * Pool amounts are wei: decimal strings of up to 78 digits, summed in bigint by the mirror and
+ * stored in `numeric(78,0)` (foresight/src/mirror.ts:68-74). One EMBER is 1e18 wei, so
+ * `Number('1234567890123456789')` has already lost the bottom four digits before anything is
+ * displayed. Every function in this section is a STRING operation or a bigint one. Nothing calls
+ * `parseFloat`, `Number()` or `toLocaleString` on an amount.
+ *
+ * ── TWO NAMES CHANGED ON THE WAY IN, AND BOTH FOR THE SAME REASON ────────────────────────────
+ *
+ * `micro-foresight-admin-web` had a `format.ts` of its own and this console already had one. Two
+ * of the names collided with DIFFERENT SIGNATURES, which is the merge hazard worth naming because
+ * TypeScript would not have caught either — each call site imports one symbol and typechecks
+ * against whichever definition won:
+ *
+ *   * `asOfLabel(iso: string | null)` there vs `asOfLabel(readAt: Date, now: Date)` here. They are
+ *     not two spellings of one idea: this console's stamps when a RESPONSE ARRIVED, and
+ *     foresight's stamps when the CHAIN MIRROR last synced. Renamed to `mirrorAsOf` below, which
+ *     is what it has always meant.
+ *   * `shortId(id: string | null | undefined): string | null` there vs
+ *     `shortId(id: string): string` here. Same idea, same eight characters — so foresight's copy
+ *     is simply gone and its call sites use this file's, which is above.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+
+/** Anything that is not an unsigned integer string is refused rather than coerced. */
+const UINT = /^\d+$/
+
+/**
+ * Wei as EMBER, cut to `maxDecimals`.
+ *
+ * Pure string work: the point is inserted `decimals` from the right and the tail is CUT, never
+ * rounded. Rounding a pool up shows an operator EMBER that is not in the contract, and on a
+ * settlement screen that is the error nobody forgives. Cutting understates by less than the last
+ * displayed digit, which is the safe direction.
+ */
+export function formatWei(
+  value: string | null | undefined,
+  { decimals = 18, maxDecimals = 4 }: { decimals?: number; maxDecimals?: number } = {},
+): string | null {
+  if (value === null || value === undefined) return null
+  const raw = value.trim()
+  if (!UINT.test(raw)) return null
+
+  const padded = raw.padStart(decimals + 1, '0')
+  const whole = padded.slice(0, padded.length - decimals)
+  const fraction = decimals === 0 ? '' : padded.slice(padded.length - decimals)
+
+  let shown = fraction.slice(0, maxDecimals)
+  while (shown.length > 0 && shown.endsWith('0')) shown = shown.slice(0, -1)
+
+  const grouped = groupDigits(whole)
+  return shown.length > 0 ? `${grouped}.${shown}` : grouped
+}
+
+/**
+ * Group an integer digit string in threes — `12345678` → `12,345,678`.
+ *
+ * Written out rather than delegated to `Intl.NumberFormat`, which takes a `number` and therefore
+ * silently rounds anything past 2^53 — which a pool in wei routinely is.
+ */
+export function groupDigits(digits: string): string {
+  let out = ''
+  for (let i = 0; i < digits.length; i += 1) {
+    const fromRight = digits.length - i
+    if (i > 0 && fromRight % 3 === 0) out += ','
+    out += digits[i]
+  }
+  return out
+}
+
+/**
+ * Basis points as a percentage, to one decimal place.
+ *
+ * `yesBps` is an integer the service computed in bigint before narrowing (mirror.ts:304-307), so
+ * this genuinely is integer arithmetic and not a money value passing through a double.
+ */
+export function formatBps(bps: number | null | undefined): string | null {
+  if (bps === null || bps === undefined || !Number.isFinite(bps)) return null
+  const whole = Math.trunc(bps / 100)
+  const tenths = Math.trunc(Math.abs(bps % 100) / 10)
+  return `${whole}.${tenths}%`
+}
+
+/**
+ * `2026-07-31 14:22 UTC`. Null for anything unparseable — never "now", never the empty string.
+ *
+ * Deliberately NOT `timestamp()` above, which renders in the reader's locale and time zone. The
+ * same market close time has to read identically on a laptop, in CI and in a screenshot attached
+ * to an incident: an operator in Athens and an operator in London must not disagree about when a
+ * pool was last observed, which is the one thing an observation stamp exists to settle.
+ */
+export function utcStamp(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return null
+  const date = at.toLocaleDateString('en-GB', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  const time = at.toLocaleTimeString('en-GB', {
+    timeZone: 'UTC',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  // en-GB gives dd/mm/yyyy; ISO order sorts and reads unambiguously for an audience that is half
+  // British and half not.
+  const [day, month, year] = date.split('/')
+  return `${year}-${month}-${day} ${time} UTC`
+}
+
+/**
+ * The observation stamp shown beside every mirrored figure.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * A NUMBER WITH NO `asOf` IS A CLAIM ABOUT NOW THAT IS REALLY A CLAIM ABOUT THE LAST SYNC.
+ *
+ * `null` in gives **"never synced"**, not "as of now" and not an empty string. The mirror having
+ * never run and the pool being empty produce identical numbers and mean opposite things
+ * (mirror.ts:313-315), so the two are never allowed to render the same.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function mirrorAsOf(iso: string | null | undefined): string {
+  const stamp = utcStamp(iso)
+  return stamp === null ? 'never synced' : `as of ${stamp}`
+}
+
+/** How far behind the tip, in words. Null when the service did not say. */
+export function behindLabel(behindBlocks: number | null | undefined): string | null {
+  if (behindBlocks === null || behindBlocks === undefined || !Number.isFinite(behindBlocks)) {
+    return null
+  }
+  if (behindBlocks <= 0) return 'at the chain tip'
+  return `${behindBlocks} block${behindBlocks === 1 ? '' : 's'} behind the tip`
+}
+
+/**
+ * A duration in seconds, in words. Used for the dispute window.
+ *
+ * Exact rather than approximate: "48 hours" and "47 hours 59 minutes" are different promises when
+ * one of them is when a stranger may claim their money.
+ */
+export function formatDuration(seconds: number | null | undefined): string | null {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
+    return null
+  }
+  const whole = Math.trunc(seconds)
+  if (whole === 0) return 'none'
+  const parts: string[] = []
+  const days = Math.trunc(whole / 86_400)
+  const hours = Math.trunc((whole % 86_400) / 3600)
+  const minutes = Math.trunc((whole % 3600) / 60)
+  const secs = whole % 60
+  if (days) parts.push(`${days}d`)
+  if (hours) parts.push(`${hours}h`)
+  if (minutes) parts.push(`${minutes}m`)
+  if (secs) parts.push(`${secs}s`)
+  return parts.join(' ')
+}
+
+/**
+ * A link that is safe to put in an operator's browser.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE SOURCES ON THE IDEA QUEUE CAME OUT OF A WEB SEARCH AND A LANGUAGE MODEL.
+ *
+ * They are rendered prominently, which is the point of the screen — and they are also the one
+ * field in this whole console whose content nobody in this estate wrote. A `javascript:` URL in a
+ * source list is a script that runs with the operator's session, and since the fold that session
+ * is the one that can also authorise a ledger reversal. So the scheme is checked against an
+ * allowlist and anything else renders as inert text with its raw value shown, rather than as a
+ * link that does not work or a link that does something else.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function safeHref(url: string | null | undefined): string | null {
+  if (!url) return null
+  let parsed: URL
+  try {
+    parsed = new URL(url.trim())
+  } catch {
+    // A relative reference has no origin to judge and no business in a cited-source list.
+    return null
+  }
+  return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : null
+}
+
+/** The host of a source, shown beside its title so the operator sees who is being cited. */
+export function hostOf(url: string | null | undefined): string | null {
+  const safe = safeHref(url)
+  if (safe === null) return null
+  try {
+    return new URL(safe).host
+  } catch {
+    return null
+  }
+}

@@ -49,6 +49,29 @@ body {
   border-bottom: 1px solid var(--cf-line);
 }
 
+/*
+ * The Foresight section's own navigation, one level below the console's.
+ *
+ * NOT sticky, and that is the whole modifier. `.wt-subnav` pins itself to `var(--cf-bar-h)` — the
+ * company bar's height — so that the console's nav stays reachable while a long audit page
+ * scrolls. Two sticky bars would either stack (costing a third of a laptop's viewport on a screen
+ * whose job is a long queue) or collide at the same offset, with the second silently drawn over
+ * the first. The section nav is short and sits at the top of its own section, so it scrolls away
+ * with it.
+ */
+.wt-subnav--section {
+  position: static;
+  top: auto;
+  z-index: auto;
+  background: transparent;
+  border-bottom: 1px solid var(--cf-line);
+  margin-bottom: 1.25rem;
+}
+
+.wt-subnav--section .wt-subnav__inner {
+  padding: 0;
+}
+
 .wt-subnav__inner {
   display: flex;
   gap: 0.25rem;
@@ -1026,4 +1049,391 @@ body {
 /* A quiet button is still a button: same hit area, lower emphasis. */
 .cf-btn--quiet {
   opacity: 0.85;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE FORESIGHT SECTION — everything below this line arrived with the P13 fold.
+ *
+ * Carried over from `micro-foresight-admin-web`'s stylesheet with its `fa-` namespace rewritten to
+ * this console's `aw-`, so that one bundle has one namespace and a reader does not have to know
+ * which repository a class came from to know where it is defined.
+ *
+ * ONLY the rules the four folded screens actually use came across. The rest of that file was this
+ * console's own components under a different prefix — `.fa-note`, `.fa-field`, `.fa-action`,
+ * `.fa-danger` — because both stylesheets descend from the same web template. Those are NOT
+ * redefined here: two definitions of `.aw-note--crit` in one stylesheet is a colour decided by
+ * source order, which is the kind of thing that changes when somebody sorts a file.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* Visible to a screen reader, not to the eye. Used where a colour or a position carries meaning
+   that has to be said in words to somebody who cannot see it. */
+.aw-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.aw-section {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.aw-lede {
+  margin: 0 0 1rem;
+  max-width: 46rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.aw-lede--tight {
+  margin-bottom: 0.5rem;
+}
+
+.aw-mono {
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.aw-unit,
+.aw-stamp {
+  color: var(--cf-fg-mute);
+  font-size: 0.75rem;
+}
+
+/* Absent, said out loud. Never styled as a dash that could be read as a zero. */
+.aw-missing {
+  color: var(--cf-fg-mute);
+  font-style: italic;
+  font-size: 0.82rem;
+}
+
+.aw-pre {
+  margin: 0.5rem 0;
+  padding: 0.7rem;
+  border-radius: 8px;
+  background: var(--cf-bg-sunken);
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.aw-filter {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line-strong);
+  background: none;
+  color: var(--cf-fg-dim);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.aw-filter:hover {
+  background: var(--cf-surface-hover);
+  color: var(--cf-fg);
+}
+
+/* Selected carries weight and a border as well as a colour — `aria-pressed` says it too. */
+.aw-filter.is-active {
+  border-color: var(--cf-accent);
+  color: var(--cf-fg);
+  font-weight: 600;
+}
+
+.aw-filter:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 1px;
+}
+
+/* ---------------------------- status ------------------------------- */
+
+.aw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line-strong);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.aw-pill__glyph {
+  font-size: 0.7rem;
+}
+
+.aw-pill--live .aw-pill__glyph {
+  color: var(--cf-viz-good);
+}
+
+.aw-pill--warn .aw-pill__glyph {
+  color: var(--cf-viz-warn);
+}
+
+.aw-pill--done {
+  color: var(--cf-fg-dim);
+}
+
+/* The lifecycle rail. Position is reinforced by a tick, a glyph or a dot — never by colour. */
+.aw-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.aw-rail__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--cf-fg-mute);
+}
+
+.aw-rail__step--now .aw-rail__mark {
+  color: var(--cf-accent);
+}
+
+.aw-rail--void {
+  align-items: center;
+}
+
+.aw-rail__note {
+  color: var(--cf-fg-mute);
+}
+
+/* ---------------------------- the queue ---------------------------- */
+
+.aw-idea__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.aw-idea__question {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  max-width: 48rem;
+}
+
+.aw-idea__facts {
+  margin-bottom: 1rem;
+}
+
+.aw-idea__decide {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cf-line);
+}
+
+.aw-idea__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* --------------------------- the sources --------------------------- */
+
+/*
+ * The loudest block on a proposal card, on purpose. The sources are the only part of a proposal
+ * an operator can check the resolution criteria against; a layout that puts the prompt hash where
+ * the eye lands first has made the checkable thing secondary.
+ */
+.aw-sources {
+  margin: 1rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--cf-accent);
+  background: var(--cf-bg-sunken);
+}
+
+.aw-sources__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--cf-fg);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aw-sources__toggle:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 3px;
+}
+
+.aw-sources__list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.aw-sources__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.aw-sources__title {
+  color: var(--cf-fg);
+  font-size: 0.9rem;
+}
+
+/* 0.9rem body copy in the accent — the same 4.44:1 defect as `.wt-link` above, same fix. */
+a.aw-sources__title {
+  color: var(--cf-accent-hover);
+}
+
+.aw-sources__meta {
+  color: var(--cf-fg-mute);
+  font-size: 0.75rem;
+}
+
+.aw-sources__warn {
+  margin-top: 0.25rem;
+}
+
+/* -------------------------- provenance ----------------------------- */
+
+.aw-details {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.aw-details > summary {
+  cursor: pointer;
+  color: var(--cf-fg-dim);
+  padding: 0.25rem 0;
+}
+
+.aw-details > summary:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 2px;
+}
+
+.aw-details--discard > summary {
+  color: var(--cf-fg-mute);
+}
+
+.aw-provenance {
+  margin-top: 0.5rem;
+}
+
+.aw-field__hint--block {
+  display: block;
+  margin: 0.4rem 0;
+}
+
+.aw-action--blocked {
+  background: none;
+  border-style: dashed;
+}
+
+.aw-btn--go:not(:disabled) {
+  border-color: var(--cf-accent);
+}
+
+/* --------------------------- the choice ---------------------------- */
+
+.aw-choice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--cf-line-strong);
+  border-radius: 8px;
+}
+
+.aw-choice__legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.aw-choice__option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.aw-choice__option:hover {
+  background: var(--cf-surface-hover);
+}
+
+/* Chosen is a border and a weight as well as a tint: a radio's own dot is the primary channel,
+   and this only reinforces it. */
+.aw-choice__option.is-chosen {
+  outline: 1px solid var(--cf-accent);
+}
+
+.aw-choice__word {
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 3rem;
+}
+
+.aw-choice__detail {
+  color: var(--cf-fg-dim);
+  font-size: 0.85rem;
+}
+
+.aw-choice__caveat {
+  margin: 0.5rem 0 0;
+  color: var(--cf-fg-mute);
+  font-size: 0.78rem;
+}
+
+/* --------------------------- the outcome --------------------------- */
+
+.aw-outcome__headline {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.aw-outcome--contestable {
+  border-color: var(--cf-viz-warn);
+}
+
+.aw-pool__facts {
+  margin-top: 0.9rem;
+}
+
+.aw-refusal {
+  border-color: var(--cf-line-strong);
+}
+
+.aw-cell--question {
+  white-space: normal;
+  min-width: 20rem;
+  font-weight: 500;
+}
+
+.aw-cell__id {
+  display: block;
+  color: var(--cf-fg-mute);
 }

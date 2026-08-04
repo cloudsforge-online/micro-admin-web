@@ -20,7 +20,14 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
-import { DEEP_LINK_PATH, NAV, NON_INDEX_PATHS, ROUTES } from '../src/lib/routes.ts'
+import {
+  DEEP_LINK_PATH,
+  FORESIGHT_DEEP_LINK_PATH,
+  FORESIGHT_NAV,
+  NAV,
+  NON_INDEX_PATHS,
+  ROUTES,
+} from '../src/lib/routes.ts'
 
 const read = (file: string): string => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
 
@@ -258,5 +265,130 @@ describe('the CI deep-link probe names a real route', () => {
   it('CI also probes an address the console does NOT own, and requires a 404', () => {
     assert.match(ci, /nope\/not\/a\/route/)
     assert.match(ci, /"404"/)
+  })
+})
+
+/* ══════════════════════ the Foresight section, folded in at P13 ══════════════════════ */
+
+/**
+ * The fold's own routing, checked at the three layers that have to agree about it.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE FAILURE THIS GUARDS IS A DEEP LINK THAT WORKS UNDER `pnpm dev` AND 404s IN PRODUCTION.
+ *
+ * `/foresight/markets/<uuid>` is the address an operator pastes into a chat window when they want
+ * a second pair of eyes before resolving a market — which is to say it is the one address in this
+ * section that is followed COLD, in a fresh tab, by somebody who was not already on the page. That
+ * is exactly the path a client-side router serves perfectly and nginx has never heard of.
+ *
+ * It is also a segment deeper than anything this console routed before today. Every previous
+ * wildcard was two segments (`/approvals/<uuid>`); this is three. The nginx block matches on the
+ * FIRST segment and everything under it, so three works for the same reason two does — but "so it
+ * should" is precisely what this estate has been wrong about before, which is why it is asserted
+ * rather than reasoned about.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+describe('the Foresight section', () => {
+  it('is one top-level route, not three', () => {
+    // The three screens are one product's lifecycle. Promoting them into the estate's own
+    // workflow bar would put "Markets" beside "Approvals" as if they were the same kind of thing.
+    const foresight = ROUTES.filter((r) => r.path.startsWith('foresight'))
+    assert.equal(foresight.length, 1, `expected one foresight route, found ${foresight.length}`)
+    assert.equal(foresight[0]?.path, 'foresight')
+  })
+
+  it('is a WILDCARD, because markets and the market detail live under it', () => {
+    // Without this the route table would claim `/foresight` is a leaf, and the next person to read
+    // it would have no reason to keep the nginx alternation matching everything beneath.
+    assert.equal(ROUTES.find((r) => r.path === 'foresight')?.wildcard, true)
+  })
+
+  it('is offered in the top-level navigation', () => {
+    assert.ok(NAV.some((n) => n.to === '/foresight'), 'the fold is unreachable from the nav')
+  })
+
+  it('declares its three screens as a SECOND-level nav, never as top-level routes', () => {
+    // A path with a slash in it would produce an nginx location block that does not mean what it
+    // says — which is what the top-level test above forbids. These live in their own table.
+    assert.equal(FORESIGHT_NAV.length, 3)
+    for (const item of FORESIGHT_NAV) {
+      assert.ok(item.to.startsWith('/foresight'), `${item.to} is not inside the section`)
+    }
+    assert.deepEqual(
+      FORESIGHT_NAV.map((n) => n.to),
+      ['/foresight', '/foresight/markets', '/foresight/categories'],
+    )
+  })
+
+  it('ends the index link and NOT the markets link', () => {
+    // `end` decides which link lights up. Without it on the index, the queue link would stay lit
+    // on every screen in the section; WITH it on markets, the section link would go dark the
+    // moment an operator opened a market — while they are still in it.
+    assert.equal(FORESIGHT_NAV.find((n) => n.to === '/foresight')?.end, true)
+    assert.equal(FORESIGHT_NAV.find((n) => n.to === '/foresight/markets')?.end, false)
+  })
+
+  it('mounts all four screens in the router, nested under the one path', () => {
+    assert.match(appSource, /path="foresight"/)
+    assert.match(appSource, /path="markets"/)
+    assert.match(appSource, /path="markets\/:id"/)
+    assert.match(appSource, /path="categories"/)
+  })
+
+  it('puts the section layout AND every screen under it behind the session gate', () => {
+    // Wrapping only the layout looks sufficient and is not: a child route renders inside a parent
+    // that has already returned its children. Wrapping only the children would leave the section's
+    // navigation visible to a signed-out browser.
+    const section = appSource.slice(appSource.indexOf('path="foresight"'))
+    const guards = section.match(/<ProtectedRoute>/g) ?? []
+    assert.ok(guards.length >= 4, `${guards.length} guards inside the foresight section`)
+  })
+
+  it('catches an unknown address INSIDE the section rather than falling to the index', () => {
+    // Without a nested catch-all, `/foresight/marketz` matches the section index and renders the
+    // idea queue — a 200 for a route that does not exist, which is the exact thing nginx.conf's
+    // enumeration exists to prevent, reintroduced one layer up.
+    const section = appSource.slice(appSource.indexOf('path="foresight"'))
+    const end = section.indexOf('{/* Unknown paths render inside the shell')
+    assert.ok(end > 0, 'could not find the end of the foresight section')
+    assert.match(section.slice(0, end), /path="\*"/)
+  })
+
+  it('is served by nginx, under the same enumerated block', () => {
+    assert.ok(nginxPaths().includes('foresight'), 'nginx.conf does not serve /foresight')
+  })
+})
+
+describe('the Foresight deep link, which is three segments rather than two', () => {
+  it('starts at a route this console owns', () => {
+    const segment = FORESIGHT_DEEP_LINK_PATH.split('/')[1] ?? ''
+    assert.ok(NON_INDEX_PATHS.includes(segment), `/${segment} is not a route`)
+  })
+
+  it('lands under a route declared as a wildcard', () => {
+    const segment = FORESIGHT_DEEP_LINK_PATH.split('/')[1]
+    assert.equal(ROUTES.find((r) => r.path === segment)?.wildcard, true)
+  })
+
+  it('is genuinely three segments deep, which is what makes it worth probing separately', () => {
+    // `DEEP_LINK_PATH` already proves two. If this ever shortened to two it would stop testing
+    // anything the other probe does not, while still passing.
+    assert.equal(
+      FORESIGHT_DEEP_LINK_PATH.split('/').filter(Boolean).length,
+      3,
+      `${FORESIGHT_DEEP_LINK_PATH} is not three segments deep`,
+    )
+  })
+
+  it('is matched by the nginx block, which anchors on the FIRST segment only', () => {
+    // The assertion the whole describe exists for: reconstruct nginx's own regex and run the
+    // three-segment path through it, rather than trusting that `(/|$)` behaves as read.
+    const alternation = nginxPaths().join('|')
+    assert.match(FORESIGHT_DEEP_LINK_PATH, new RegExp(`^/(${alternation})(/|$)`))
+  })
+
+  it('is the path CI actually probes', () => {
+    // A probe against a path the app does not own proves only that the 404 page renders.
+    assert.ok(ci.includes(FORESIGHT_DEEP_LINK_PATH), `ci.yml does not probe ${FORESIGHT_DEEP_LINK_PATH}`)
   })
 })

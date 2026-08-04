@@ -134,7 +134,7 @@ describe('what it does when it cannot tell', () => {
 
 describe('the role name', () => {
   it('is the one admin-api requires', () => {
-    // `requireOperator` at admin-api/src/server.ts:443 calls `isAdmin`, which reads `role:admin`.
+    // `requireOperator` at admin-api/src/server.ts:496 calls `isAdmin`, which reads `role:admin`.
     assert.equal(OPERATOR_ROLE, 'admin')
   })
 })

@@ -5,7 +5,7 @@ tamper-evident audit and its chain verification, feature flags and estate-wide b
 
 It is the browser half of `micro-admin-api`. It holds no state of its own, decides nothing, and
 enforces nothing: `admin-api` verifies the token and the `admin` role on every request
-(`requireOperator`, `admin-api/src/server.ts:443`), refuses a service token outright, and enforces
+(`requireOperator`, `admin-api/src/server.ts:496`), refuses a service token outright, and enforces
 the four-eyes control three separate times. **This console's job is to make all of that legible.**
 
 Design authority: [`ecosystem/22-browser-journeys.md`](https://github.com/cloudsforge-online/micro-docs/blob/main/ecosystem/22-browser-journeys.md)

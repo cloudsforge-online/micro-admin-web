@@ -51,7 +51,76 @@ export const ROUTES: readonly ConsoleRoute[] = [
   { path: 'engagement', label: 'Engagement', wildcard: false },
   { path: 'flags', label: 'Flags', wildcard: false },
   { path: 'broadcasts', label: 'Broadcasts', wildcard: false },
+  // ── The Foresight operator panel, folded in at P13 ──────────────────────────────────────────
+  //
+  // One top-level segment owning everything beneath it, rather than three siblings — `/foresight`
+  // is the idea queue, `/foresight/markets`, `/foresight/markets/:id` and `/foresight/categories`
+  // are the rest, and `FORESIGHT_NAV` below is the second-level navigation inside the section.
+  //
+  // WHY A SECTION AND NOT THREE MORE TOP-LEVEL ENTRIES. This console's nav is the estate's
+  // workflow — is anything wrong, what needs a second signature, what happened, who is affected.
+  // Foresight's three screens are one product's lifecycle, and spreading them across that bar
+  // would put "Markets" beside "Approvals" as if they were the same kind of thing. They are not:
+  // Approvals is every service's queue and Markets is one service's. The registry row this fold
+  // deletes said the same in its blurb — "Operator panel: idea queue, open/close/resolve/void" is
+  // one panel, and it stays one.
+  //
+  // It is also what keeps the nginx list honest: `foresight` is one entry in one alternation, and
+  // the wildcard is what makes a hard refresh on `/foresight/markets/<uuid>` serve the shell.
+  { path: 'foresight', label: 'Foresight', wildcard: true },
 ]
+
+/**
+ * The section's own root, as one string.
+ *
+ * Everything under `/foresight` composes its address from this — the nav below, the pages' links,
+ * and the deep-link probe. See `foresightPath`.
+ */
+export const FORESIGHT_BASE = '/foresight'
+
+/**
+ * The navigation INSIDE the Foresight section.
+ *
+ * Its own table rather than more `ROUTES` rows, because these are not top-level segments and
+ * `ROUTES` is checked by `test/routes.test.ts` for exactly that — a path with a slash in it would
+ * produce an nginx location block that does not mean what it says. The three screens are declared
+ * here, the section's layout renders them, and `app.tsx` mounts them under the one wildcard route.
+ */
+export const FORESIGHT_NAV: ReadonlyArray<{ to: string; label: string; end: boolean }> = [
+  // The queue is the section index because it is the screen with work waiting in it, which is the
+  // same reason Approvals is not this console's index and the estate view is.
+  { to: FORESIGHT_BASE, label: 'Idea queue', end: true },
+  { to: `${FORESIGHT_BASE}/markets`, label: 'Markets', end: false },
+  { to: `${FORESIGHT_BASE}/categories`, label: 'What we will run', end: true },
+]
+
+/**
+ * Every in-app address the Foresight screens link to, built from one base.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE BUG THIS EXISTS TO HAVE FIXED ONCE, RATHER THAN THREE TIMES.
+ *
+ * In `micro-foresight-admin-web` these screens were the whole app, so the market list linked to
+ * `/markets/<id>`, the detail page linked back to `/markets`, and approving a proposal navigated
+ * to `/markets/<id>`. All three are ROOT-relative, all three moved into this console unchanged,
+ * and all three then pointed at addresses this console does not route — so every one of them
+ * landed on the 404 page. Nothing typechecked differently and nothing in the client suite noticed:
+ * a `<Link to>` is a string, and the route table it has to agree with is in another file.
+ *
+ * `test/foresight-journeys.test.ts` caught it by mounting the list and reading the `href` off the
+ * rendered anchor, which is the only layer at which a wrong link is observable at all.
+ *
+ * So the section's base is written once, here, beside the route that declares it — and the pages
+ * compose their addresses from it rather than restating a prefix each. If the section is ever
+ * moved or renamed, this is the line that moves.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export const foresightPath = {
+  queue: (): string => FORESIGHT_BASE,
+  markets: (): string => `${FORESIGHT_BASE}/markets`,
+  market: (id: string): string => `${FORESIGHT_BASE}/markets/${id}`,
+  categories: (): string => `${FORESIGHT_BASE}/categories`,
+} as const
 
 /** What the sub-navigation renders, with the leading slash a `NavLink` wants. */
 export const NAV: ReadonlyArray<{ to: string; label: string }> = ROUTES.filter(
@@ -71,3 +140,16 @@ export const NON_INDEX_PATHS: readonly string[] = ROUTES.filter((r) => r.path !=
  * for.
  */
 export const DEEP_LINK_PATH = '/approvals/3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071'
+
+/**
+ * A second probe, THREE segments deep, under the route the fold added.
+ *
+ * `DEEP_LINK_PATH` is two segments and every wildcard route before today was two. `/foresight`'s
+ * detail page is three — `/foresight/markets/<uuid>` — and that is a different question of the
+ * nginx config: `location ~ ^/(…|foresight)(/|$)` matches the FIRST segment and everything under
+ * it, so it covers three as readily as two, but "so it should" is what the estate has been wrong
+ * about before. It is the address an operator pastes into a chat window when they want a second
+ * pair of eyes before resolving something, so it is the one that must survive a hard refresh.
+ */
+export const FORESIGHT_DEEP_LINK_PATH =
+  '/foresight/markets/3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071'

@@ -9,7 +9,7 @@
  * valid session.
  */
 import { consumeAuthCallback, signInRedirect, signOutRedirect } from '@cloudsforge/ui'
-import { APP_NAME, apiBase, hosts, pageOrigin } from './hosts.ts'
+import { APP_NAME, apiBase, foresightApiBase, hosts, pageOrigin } from './hosts.ts'
 import { report } from './obs.ts'
 
 /** Nimbus issues and refreshes tokens; it is cross-origin from every app, always. */
@@ -367,6 +367,26 @@ export const api = <T,>(path: string, opts?: RequestOptions): Promise<T> =>
 /** Nimbus, which is cross-origin from everywhere. */
 export const nimbus = <T,>(path: string, opts?: RequestOptions): Promise<T> =>
   request<T>(nimbusUrl(), path, opts)
+
+/**
+ * `micro-foresight`, which is cross-origin from this console ALWAYS. See `src/lib/foresight.ts`.
+ *
+ * A third client rather than a `base` parameter on `api()`, so that a caller cannot reach
+ * foresight's routes by accident: the two services share no path shape — `admin-api` serves
+ * everything under `/v1` and foresight serves nothing under it — and a single function taking a
+ * base is a function whose default is one service and whose argument is another.
+ *
+ * ── What being cross-origin costs, and where it is paid ───────────────────────────────────────
+ *
+ * A CORS preflight, on every request carrying a header outside the browser's safelist. That is
+ * `authorization` on every call and `idempotency-key` on the deploy route, and BOTH must be named
+ * in the gateway's `accessControlAllowHeaders` (`deploy/gateway/dynamic/policy.yml`) or the
+ * browser refuses the response before the service sees the request. `idempotency-key` was missing
+ * from that list when these screens moved here; it is there now, and
+ * `deploy/scripts/surface-routes.py` check 8 fails if it is removed again.
+ */
+export const foresight = <T,>(path: string, opts?: RequestOptions): Promise<T> =>
+  request<T>(foresightApiBase(), path, opts)
 
 /* ---- boot and sign-in --------------------------------------------- */
 

@@ -278,6 +278,15 @@ jobs:
           deep=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/approvals/3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071 || true)
           [ "$deep" = "200" ] || { echo "::error::an owned route returned $deep — it must be served the shell"; fail=1; }
 
+          # And a THREE-segment route, which is new as of the Foresight fold (P13). Every wildcard
+          # this console had before was two segments, so the nginx block had never been exercised
+          # past one level of nesting. `/foresight/markets/<uuid>` is the address an operator pastes
+          # into a chat window for a second pair of eyes before resolving a market — followed cold,
+          # in a fresh tab, which is precisely the request a client-side router serves and nginx has
+          # never heard of. FORESIGHT_DEEP_LINK_PATH in src/lib/routes.ts; same test checks it.
+          deep3=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/foresight/markets/3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071 || true)
+          [ "$deep3" = "200" ] || { echo "::error::the foresight deep link returned $deep3 — a pasted market link must survive a hard refresh"; fail=1; }
+
           # A route it does NOT own must answer 404 while still serving the shell, so the reader
           # gets a real page and the status line tells the truth. This is the assertion the org's
           # reusable image job cannot make, because it requires a 200 for any deep link.

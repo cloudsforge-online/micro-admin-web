@@ -18,9 +18,11 @@ import { afterEach, describe, it } from 'node:test'
 import { SURFACES, cloudsforgeHosts, type CloudsForgeHosts } from '@cloudsforge/ui'
 import {
   APP_NAME,
+  FORESIGHT_SURFACE,
   PRODUCT,
   PUBLIC_SURFACE_KEYS,
   apiBase,
+  foresightApiBase,
   isLocal,
   placement,
   resolveApiBase,
@@ -236,5 +238,99 @@ describe('the four names treated as development', () => {
 
   it('does not treat a hostname merely CONTAINING localhost as local', () => {
     assert.equal(isLocal('localhost.evil.test'), false)
+  })
+})
+
+/* ═══════════════ the Foresight API, which is the one cross-origin call in the bundle ═══════════════ */
+
+/**
+ * `foresightApiBase()` is absolute ALWAYS, and that is the property rather than an accident.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE MISTAKE IT RULES OUT IS A REQUEST FOR JSON ANSWERED WITH THIS CONSOLE'S OWN index.html.
+ *
+ * `apiBase()` returns '' in production, because the console and `admin-api` share `admin.<apex>`.
+ * If the Foresight screens resolved their base the same way, a future edit that made this bundle's
+ * origin look like foresight's — or a `resolveApiBase` that returned '' for any reason — would
+ * send `GET /markets` to `admin.<apex>/markets`. The gateway's `cf-api-admin` claims only `/v1` on
+ * that host (deploy/gateway/dynamic/estate-web.yml:496), so the request would fall through to
+ * `cf-web-admin` and be answered by the app shell: a 200, carrying HTML, where JSON was expected.
+ * That failure is silent in the network tab and shows up as a JSON parse error naming the wrong
+ * thing — the exact shape `deploy/scripts/surface-routes.py` check 3 exists to prevent at the
+ * gateway, asserted here at the client.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+describe('the Foresight API base', () => {
+  it('is the foresight surface, not this console', () => {
+    assert.equal(FORESIGHT_SURFACE, 'foresight')
+    assert.notEqual(FORESIGHT_SURFACE, PRODUCT)
+  })
+
+  it('is ABSOLUTE from this console’s own production origin', () => {
+    installWindow('https://admin.cloudsforge.online/')
+    assert.equal(foresightApiBase(), 'https://foresight.cloudsforge.online')
+  })
+
+  it('is absolute under `pnpm dev` too, at the registry’s devPort', () => {
+    // 4021, and the registry's own comment records that it was briefly 4011 — beacon's — so a
+    // local stack resolved foresight to the monitoring service.
+    installWindow('http://localhost:5183/')
+    assert.equal(foresightApiBase(), 'http://localhost:4021')
+  })
+
+  it('is NEVER the empty string, on any origin the console will render at', () => {
+    // The invariant, walked rather than argued. An empty base means "relative", and a relative
+    // /markets on this host is answered by this bundle.
+    for (const origin of [
+      'https://admin.cloudsforge.online/',
+      'https://admin.cloudsforge.localtest.me/',
+      'http://localhost:5183/',
+      'http://127.0.0.1:5183/',
+    ]) {
+      installWindow(origin)
+      assert.notEqual(foresightApiBase(), '', `relative base while served from ${origin}`)
+      removeWindow()
+    }
+  })
+
+  it('is STILL absolute when the page origin IS foresight’s — the case that distinguishes it', () => {
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // THE ONLY ORIGIN THAT TELLS THE TWO IMPLEMENTATIONS APART, WHICH IS WHY IT IS TESTED.
+    //
+    // The first version of this suite walked the four origins the console legitimately renders at
+    // and asserted the base was never ''. It passed — and it passed just as happily against a
+    // `foresightApiBase()` written as `resolveApiBase(origin, hosts, 'foresight')`, because none
+    // of those four origins IS foresight's, so `resolveApiBase` never reached its '' branch. A
+    // check that cannot fail is not a check, and this estate has now found several.
+    //
+    // This is the branch. `resolveApiBase` returns '' here; reading the registry host returns the
+    // absolute URL. Today `placement()` refuses to render at all on this origin, so the console
+    // never asks the question — but that refusal is the ONLY thing standing between a relative
+    // base and an operator panel making same-origin calls from the public product's page. Pinning
+    // the absolute answer means the invariant does not depend on a second function staying right.
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    installWindow('https://foresight.cloudsforge.online/')
+    assert.equal(
+      foresightApiBase(),
+      'https://foresight.cloudsforge.online',
+      'the Foresight base must never be relative, on any origin whatsoever',
+    )
+  })
+
+  it('does not resolve to this console’s own origin, which would make it same-origin', () => {
+    installWindow('https://admin.cloudsforge.online/')
+    assert.notEqual(new URL(foresightApiBase()).origin, 'https://admin.cloudsforge.online')
+  })
+
+  it('names foresight as a PUBLIC origin this bundle refuses to be served from', () => {
+    // The two facts together are the whole arrangement: this console CALLS foresight and must
+    // never BE foresight. If the second ever stopped being true, the first would silently become
+    // a same-origin call and the operator panel would be reachable from the public product.
+    assert.ok(
+      PUBLIC_SURFACE_KEYS.includes(FORESIGHT_SURFACE),
+      'foresight must remain an origin this console refuses to render at',
+    )
+    const hosts = production()
+    assert.equal(placement('https://foresight.cloudsforge.online', 'foresight.cloudsforge.online', hosts), 'public-origin')
   })
 })
