@@ -10,7 +10,7 @@
  * colour alone: Admin's clay (#c2704f) is a warm mid-tone that has no reserved meaning in this
  * estate, and nothing in this console may depend on the accent to say what it is.
  */
-import { CloudsForgeBar } from '@cloudsforge/ui'
+import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
 import { NavLink, Outlet } from 'react-router-dom'
 import { PRODUCT } from '../lib/hosts.ts'
 import { NAV } from '../lib/routes.ts'
@@ -86,6 +86,20 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         )}
         <Outlet />
       </main>
+
+      {/*
+        The company footer, from @cloudsforge/ui. Not written here, and deliberately not
+        `<footer>` markup of this app's own: the estate had four hand-rolled footers and nine
+        surfaces with none, and the registry's `developers` row has been claiming all along that
+        the developer console is "reached from the footer" — a navigation path that existed
+        nowhere. Every link in it is derived from SURFACES, so a new product appears here without
+        this file changing.
+
+        `account` is passed for one reason: it decides whether the operator surfaces are offered.
+        Omitting it would hide them, which is safe, but this app already knows and a signed-in
+        operator should be able to reach Admin from any page.
+      */}
+      <CloudsForgeFooter current={PRODUCT} account={account} />
     </>
   )
 }
