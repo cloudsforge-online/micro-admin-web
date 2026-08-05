@@ -47,7 +47,12 @@ const audit = read('src/pages/audit.tsx')
 const flags = read('src/pages/flags.tsx')
 const broadcasts = read('src/pages/broadcasts.tsx')
 const support = read('src/pages/support.tsx')
+const backups = read('src/pages/backups.tsx')
+const backup = read('src/pages/backup.tsx')
+const protection = read('src/components/protection.tsx')
+const backupSettings = read('src/components/backup-settings.tsx')
 const irreversible = read('src/components/irreversible.tsx')
+const gate = read('src/lib/gate.ts')
 const auditPreview = read('src/components/audit-preview.tsx')
 const tone = read('src/components/tone.tsx')
 const shell = read('src/components/shell.tsx')
@@ -62,6 +67,8 @@ const PAGES: ReadonlyArray<[string, string]> = [
   ['flags', flags],
   ['broadcasts', broadcasts],
   ['support', support],
+  ['backups', backups],
+  ['backup', backup],
 ]
 
 /* ══════════════════ the audit is shown before the action ══════════════════ */
@@ -362,9 +369,240 @@ describe('degradation is rendered, never a blank page', () => {
       ['flags', flags],
       ['broadcasts', broadcasts],
       ['support', support],
+      ['backups', backups],
     ] as const) {
       assert.match(source, /state === 'empty'/, `${name} has no empty state`)
     }
+  })
+})
+
+/* ══════════════════ backups: the reassuring facts, and the one that is not ══════════════════ */
+
+/**
+ * The backup screens, checked at the layer a source-text test can actually reach.
+ *
+ * The pure half — `estateEnvironment`, `restoreGate`, `restoreConfirmationPhrase`, `formatBytes`,
+ * `verificationTone` — is proven properly as functions in `test/backups.test.ts`, and what an
+ * operator READS is proven against a rendered DOM in the same file. What is left for this file is
+ * what it does everywhere else: that each component is WIRED to the right data, and that the
+ * things which must be absent are absent.
+ */
+describe('the backup screens', () => {
+  it('never renders artefact contents, because there is no field that could hold them', () => {
+    // The rule is stronger than "do not display secrets": this client has no route and no type
+    // that carries a byte of an artefact, so the assertion is that nothing here reaches for one.
+    for (const [name, source] of [
+      ['backups', backups],
+      ['backup', backup],
+      ['protection', protection],
+    ] as const) {
+      const clean = withoutComments(source)
+      for (const forbidden of ['contents', 'plaintext', 'mnemonic', 'xprv', 'privateKey', 'secret']) {
+        assert.doesNotMatch(
+          clean,
+          new RegExp(`\\.${forbidden}\\b`),
+          `${name} reads a ${forbidden} field off an artefact`,
+        )
+      }
+    }
+  })
+
+  it('renders the protection statement on the EMPTY result, not only on a populated one', () => {
+    // An estate with no backups still has a destination and still has limits, and that is the case
+    // where an operator most needs to read them. Gating the panel on `state === 'ok'` would hide
+    // the honesty block exactly when the news is worst.
+    assert.match(backups, /backups\.data !== null && \(\s*<BackupsBody/s)
+    assert.match(backups, /<ProtectionPanel protection=\{page\.protection\}/)
+  })
+
+  it('renders admin-api’s own covers / doesNotCover lists rather than sentences of its own', () => {
+    assert.match(protection, /protection\.doesNotCover\.map/)
+    assert.match(protection, /protection\.covers\.map/)
+  })
+
+  it('puts what is NOT protected before what is, in document order', () => {
+    // The flattering order puts the protections at the top and leaves the limits to somebody who
+    // scrolls. Compared against the rendered lists, not the imports.
+    const source = withoutComments(protection)
+    assert.ok(
+      source.indexOf('doesNotCover.map') < source.indexOf('covers.map'),
+      'the protections are rendered before the limits',
+    )
+  })
+
+  it('shows no tick, and says the same-host case is one failure and not safety', () => {
+    assert.match(protection, /protection\.sameHost \?/)
+    assert.match(protection, /second disk in the same machine/)
+    assert.match(protection, /theft, fire, flood, a failed host, ransomware/)
+    // A tick beside a list of what is uncovered would be the stylesheet supplying the conclusion
+    // the words refuse to.
+    assert.doesNotMatch(withoutComments(protection), /✓/, 'the honesty panel renders a tick')
+  })
+
+  it('states that the custody keyring is deliberately absent, and cites its real procedure', () => {
+    assert.match(protection, /custody keyring is not in any of this/)
+    assert.match(protection, /deploy\/docs\/custody-backup-restore\.md §4/)
+  })
+
+  it('shows that a custody backup EXISTS as a count and a date, and nothing else', () => {
+    assert.match(protection, /custody\.runs/)
+    assert.match(protection, /custody\.lastAt/)
+    assert.match(protection, /never shown here/)
+  })
+
+  it('renders "never verified" as a word rather than as a missing tick', () => {
+    assert.match(backups, /<StatusWord\s*\n?\s*tone=\{verificationTone\(/)
+    assert.match(backups, /neverVerified\(backup\) &&/)
+  })
+
+  it('leads with the unverified count when there is one', () => {
+    assert.match(backups, /verificationHeadline\(page\.backups\)/)
+    assert.match(backups, /headline !== null &&/)
+  })
+
+  it('never renders an absent size as a zero', () => {
+    // `BigInt('')` is `0n`, and "0 B" is exactly the reading an absent size must not produce on the
+    // screen that decides whether there is anything to restore.
+    for (const [name, source] of [['backups', backups], ['backup', backup]] as const) {
+      assert.match(source, /formatBytes\(/, `${name} does not format sizes at all`)
+      assert.match(source, /not measured/, `${name} has no absence for a missing size`)
+      assert.doesNotMatch(
+        withoutComments(source),
+        /Number\(.*[Bb]ytes/,
+        `${name} parses a byte count to a number`,
+      )
+    }
+  })
+
+  it('the detail page re-asks when the id changes', () => {
+    // Without the id in the dependency array the second backup renders the first one's artefacts
+    // under the second one's address — on the screen whose job is to say which backup is about to
+    // be restored.
+    assert.match(backup, /'That backup could not be read\.', \[id\]\)/)
+  })
+
+  it('puts the two environments side by side, above the action', () => {
+    const source = withoutComments(backup)
+    assert.ok(
+      source.indexOf('<EnvironmentComparison') < source.indexOf('<RestoreSection'),
+      'the environments must be readable before anything can be typed',
+    )
+    assert.match(backup, /These artefacts were taken from/)
+    assert.match(backup, /This estate reads as/)
+  })
+
+  it('gates both restores on restoreGate rather than checking fields itself', () => {
+    const calls = backup.match(/restoreGate\(\{/g) ?? []
+    assert.equal(calls.length, 2, 'each mode asks the gate for itself')
+    assert.match(backup, /mode: 'verify'/)
+    assert.match(backup, /mode: 'live'/)
+  })
+
+  it('replaces the live control with the REASON when the gate refuses structurally', () => {
+    // Not a disabled button: a disabled control reads as "not yet" and gets clicked at.
+    assert.match(backup, /!gate\.offered && !gate\.needsOperatorInput/)
+    assert.match(backup, /No live restore is available here/)
+  })
+
+  it('keeps the fields on screen when the refusal is only that they are empty', () => {
+    // Hiding the approval-id field because the approval id is empty is a form that removes the box
+    // you were about to fill in.
+    const source = withoutComments(backup)
+    assert.ok(
+      source.indexOf('aw-live-approval') < source.indexOf('gate.offered ? ('),
+      'the approval-id field must be rendered before the gated control, not inside it',
+    )
+  })
+
+  it('prefers the phrase the SERVICE sent over the one it can build itself', () => {
+    // `requestRestore` compares the confirmation with `!==` (admin-api/src/backups.ts:645), so the
+    // two spellings diverging by one character refuses every live restore in the estate — after
+    // two operators have signed for it. The served value wins; the local builder is the fallback.
+    assert.match(backup, /const phrase = servedPhrase \?\? gate\.phrase/)
+    assert.match(backup, /phrase=\{phrase\}/)
+    assert.match(gate, /restore \$\{where\} from \$\{stamp\}/)
+  })
+
+  it('sends the CANONICAL phrase as the approval param, not the operator’s keystrokes', () => {
+    // `confirmationGate` accepts a different case and different spacing on purpose — a gate that
+    // failed on caps-lock teaches people to paste, which defeats the mechanism — but the service
+    // compares exactly, so what is STORED has to be the exact string.
+    assert.match(backup, /confirmation: phrase \?\? ''/)
+  })
+
+  it('the live button says it is ASKING, and names the environment', () => {
+    // It raises an estate.restore request; nothing is restored by pressing it. A button labelled
+    // "Restore mainnet" would be the console describing an action it does not perform.
+    assert.match(
+      backup,
+      /runLabel=\{`Ask two operators to restore \$\{backup\.environment\}`\}/,
+    )
+    assert.match(backup, /Nothing happens when you send it/)
+  })
+
+  it('raises the request against the BACKUP RUN, which is estate.restore’s subject', () => {
+    // admin-api/src/actions.ts:347. The executor reads `ctx.approval.subjectId` as the backup to
+    // restore from, so a wrong subject would have two operators authorise a different backup.
+    assert.match(backup, /action: RESTORE_ACTION/)
+    assert.match(backup, /subjectId: backup\.id/)
+  })
+
+  it('sends the live path to the approval queue and the verify path to the restore route', () => {
+    // `POST /v1/restores` answers 400 for a live restore (admin-api/src/server.ts:1552), so the two
+    // halves of this screen are two different calls rather than two arguments to one. The gate is
+    // still asked about `mode: 'live'` — that is a question about what to OFFER, and it is why this
+    // assertion is about the calls rather than about the string "live" appearing in the file.
+    assert.match(backup, /startVerifyRestore\(\s*\{ backupRunId: backup\.id, targets, reason:/)
+    assert.match(backup, /requestApproval\(/)
+    const source = withoutComments(backup)
+    const live = source.slice(source.indexOf('function LiveRestore'))
+    assert.ok(!live.includes('startVerifyRestore('), 'the live path calls the verify route')
+    const verify = source.slice(source.indexOf('function VerifyRestore'), source.indexOf('function LiveRestore'))
+    assert.ok(!verify.includes('requestApproval('), 'the verify path raises an approval')
+  })
+
+  it('the safe restore is a different control, not a mode toggle on the dangerous one', () => {
+    assert.match(backup, /<ReversibleAction\s*\n?\s*label="Verify restore"/)
+    assert.match(backup, /<IrreversibleAction\s*\n?\s*label="Live restore"/)
+    assert.match(backup, /throwaway scratch database/)
+  })
+
+  it('previews the audit rows the service really writes, each cited', () => {
+    // This screen spent a while rendering NO audit preview, because the contract it was first built
+    // to described none and naming an invented action would have told an operator they were signing
+    // for a record that may not exist. The service landed writing `admin.backup.requested`
+    // (server.ts:1500) and `admin.restore.requested` (server.ts:1595), so the previews are real.
+    assert.match(backup, /previews=\{\[\s*previewVerifyRestore\(/)
+    assert.match(backup, /previews=\{\[\s*previewRequest\(/)
+    assert.match(backups, /previewBackupRequest\(\{ actor: operator\.principal/)
+    assert.match(gate, /admin-api\/src\/server\.ts:1595|server\.ts:1595/)
+    assert.match(gate, /server\.ts:1500/)
+  })
+
+  it('keeps the restore-ROW description beside the audit preview, not instead of it', () => {
+    // Two different records: the audit says somebody asked, and the restore row is where
+    // `checksumsVerified` and the outcome live.
+    assert.match(backup, /restoreRecordLines\(/)
+    assert.match(backup, /which is not the audit event above it/)
+  })
+
+  it('the settings form renders the service’s ceilings rather than reimplementing them', () => {
+    assert.match(backupSettings, /ceilingRows\(ceilings\)/)
+    assert.match(backupSettings, /What admin-api will refuse/)
+    assert.match(backupSettings, /shown rather than copied/)
+  })
+
+  it('the settings form sends only what it edits', () => {
+    const body = /saveBackupSettings\(\{[\s\S]*?\}\)/.exec(backupSettings)?.[0] ?? ''
+    assert.ok(body.length > 40, 'the save call was not found')
+    for (const field of ['ceilingBytes', 'minFreeBytes', 'verifyEnabled', 'verifyEveryMinutes']) {
+      assert.ok(!body.includes(field), `the form echoes ${field} back`)
+    }
+  })
+
+  it('states the reason beside the disabled save button, in a live region', () => {
+    assert.match(backupSettings, /problems\.length > 0 &&/)
+    assert.match(backupSettings, /aria-live="polite"/)
   })
 })
 

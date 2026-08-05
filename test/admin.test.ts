@@ -35,15 +35,22 @@ import {
   loadApprovals,
   loadAudit,
   loadBroadcasts,
+  loadBackup,
+  loadBackupSettings,
+  loadBackups,
   loadEngagementPolicies,
   loadEngagementReport,
   loadEstate,
   loadFlags,
+  loadRestores,
   lowerEngagementPolicy,
   publishBroadcast,
   requestApproval,
   retractBroadcast,
+  saveBackupSettings,
   setFlag,
+  startBackup,
+  startVerifyRestore,
   verifyChain,
 } from '../src/lib/admin.ts'
 import {
@@ -71,8 +78,12 @@ import {
  */
 const ADMIN = 'http://localhost:4014'
 
+/** `src/lib/admin.ts` as text, for the assertions about what it must NOT contain. */
+const CLIENT_SOURCE = readFileSync(new URL('../src/lib/admin.ts', import.meta.url), 'utf8')
+
 const APPROVAL_ID = '3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071'
 const BROADCAST_ID = '9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a'
+const BACKUP_ID = '5c4b3a29-1807-4f6e-95d4-c3b2a1908f7e'
 const KEY = 'idem-key-0001'
 
 let stub: FetchStub
@@ -532,22 +543,259 @@ describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts:864', () => {
   })
 })
 
+/* ══════════════════════════════ backup and restore ══════════════════════════════ */
+
+/**
+ * The seven backup routes, checked the same way as the sixteen above and for a sharper reason.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THESE ARE THE ONLY ROUTES IN THIS CLIENT WITH NO SERVER LINE BEHIND THEM.
+ *
+ * The other sixteen were read off `admin-api/src/server.ts`. These were AGREED — the service's
+ * backup module was being built in parallel and did not exist when this client was written — which
+ * is precisely the situation that produced `wallet/src/pricingclient.ts` calling `GET /v1/quotes`
+ * against a service that has never served it, and every listing in `micro-market` coming back 403
+ * for as long as it lived.
+ *
+ * A stub cannot save this. It answers whatever it is told to whatever it is asked, so it cannot
+ * tell a right path from a wrong one. What the assertions below establish is narrower and is the
+ * only thing this repository can establish alone: that the request this bundle sends is EXACTLY
+ * the request the contract describes — method, path, query, body, header — so that when the
+ * service lands, the comparison is a diff rather than an investigation.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+describe('GET /v1/backups — admin-api/src/server.ts:1332', () => {
+  it('is a GET at the exact path', async () => {
+    await loadBackups()
+    const call = only()
+    assert.equal(call.method, 'GET')
+    assert.equal(call.url.origin, ADMIN)
+    assert.equal(call.url.pathname, '/v1/backups')
+  })
+
+  it('sends limit only when asked for one', async () => {
+    await loadBackups()
+    assert.equal(only().url.search, '')
+    stub.calls.length = 0
+    await loadBackups({ limit: 50 })
+    assert.equal(only().url.searchParams.get('limit'), '50')
+  })
+
+  it('carries the operator’s bearer and no body', async () => {
+    await loadBackups()
+    const call = only()
+    assert.equal(call.headers['authorization'], 'Bearer a1')
+    assert.equal(call.body, undefined)
+  })
+})
+
+describe('GET /v1/backups/:id — admin-api/src/server.ts:1445', () => {
+  it('puts the id in the path and encodes it', async () => {
+    await loadBackup(BACKUP_ID)
+    assert.equal(only().url.pathname, `/v1/backups/${BACKUP_ID}`)
+    stub.calls.length = 0
+    await loadBackup('a/b')
+    assert.equal(only().url.pathname, '/v1/backups/a%2Fb')
+  })
+})
+
+describe('GET /v1/backups/settings — admin-api/src/server.ts:1359', () => {
+  it('is a GET at the settings path, which is NOT the id path', async () => {
+    // `settings` occupies the `:id` slot. The two are separate declarations in ADMIN_ROUTES for
+    // that reason, and this asserts the client sends the literal rather than something that would
+    // be read as an id.
+    await loadBackupSettings()
+    const call = only()
+    assert.equal(call.method, 'GET')
+    assert.equal(call.url.pathname, '/v1/backups/settings')
+  })
+})
+
+describe('PUT /v1/backups/settings — admin-api/src/server.ts:1387', () => {
+  const INPUT = {
+    rootPath: '/var/backups/cloudsforge',
+    retentionCopies: 7,
+    scheduleEnabled: true,
+    scheduleEveryMinutes: 360,
+  }
+
+  it('is a PUT with exactly the four editable fields', async () => {
+    await saveBackupSettings(INPUT)
+    const call = only()
+    assert.equal(call.method, 'PUT')
+    assert.equal(call.url.pathname, '/v1/backups/settings')
+    assert.deepEqual(call.body, INPUT)
+  })
+
+  it('sends NOTHING the form does not edit', async () => {
+    // A PUT that echoed back the ceilings it had read would let a form opened before a bound was
+    // tightened overwrite the tightening — the lost update, on the settings that decide whether
+    // there is a backup at all.
+    await saveBackupSettings(INPUT)
+    const body = only().body as Record<string, unknown>
+    for (const field of ['ceilingBytes', 'minFreeBytes', 'verifyEnabled', 'verifyEveryMinutes', 'updatedAt', 'updatedBy']) {
+      assert.equal(body[field], undefined, `${field} was sent`)
+    }
+  })
+
+  it('sends NO Idempotency-Key: the contract requires one on the two POSTs and on neither PUT', async () => {
+    await saveBackupSettings(INPUT)
+    assert.equal(only().headers['idempotency-key'], undefined)
+  })
+})
+
+describe('POST /v1/backups — admin-api/src/server.ts:1473', () => {
+  it('is a POST carrying the kind and the reason', async () => {
+    await startBackup({ kind: 'full', reason: 'before the ledger migration' }, KEY)
+    const call = only()
+    assert.equal(call.method, 'POST')
+    assert.equal(call.url.pathname, '/v1/backups')
+    assert.deepEqual(call.body, { kind: 'full', reason: 'before the ledger migration' })
+  })
+
+  it('carries the Idempotency-Key the contract requires', async () => {
+    await startBackup({ kind: 'databases', reason: 'drill' }, KEY)
+    assert.equal(only().headers['idempotency-key'], KEY)
+  })
+
+  it('never sends who asked for it', async () => {
+    // admin-api derives the actor from the verified bearer. A client that supplied it would be
+    // offering an act-as-anyone primitive on the screen that can overwrite the money data.
+    await startBackup({ kind: 'full', reason: 'x' }, KEY)
+    const body = only().body as Record<string, unknown>
+    for (const field of ['requestedBy', 'actor', 'operator', 'userId']) {
+      assert.equal(body[field], undefined, `${field} was sent`)
+    }
+  })
+})
+
+describe('GET /v1/restores — admin-api/src/server.ts:1520', () => {
+  it('is a GET at the exact path, with limit only when asked', async () => {
+    await loadRestores()
+    assert.equal(only().url.pathname, '/v1/restores')
+    assert.equal(only().url.search, '')
+    stub.calls.length = 0
+    await loadRestores({ limit: 20 })
+    assert.equal(only().url.searchParams.get('limit'), '20')
+  })
+})
+
+describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY ONLY', () => {
+  const BASE = { backupRunId: BACKUP_ID, targets: ['ledger', 'identity'], reason: 'quarterly drill' }
+
+  it('is a POST carrying the backup, the targets and the reason, with mode fixed to verify', async () => {
+    await startVerifyRestore(BASE, KEY)
+    const call = only()
+    assert.equal(call.method, 'POST')
+    assert.equal(call.url.pathname, '/v1/restores')
+    assert.deepEqual(call.body, {
+      backupRunId: BACKUP_ID,
+      mode: 'verify',
+      targets: ['ledger', 'identity'],
+      reason: 'quarterly drill',
+    })
+  })
+
+  it('sends NO confirmation and NO approvalId, because this route takes neither', async () => {
+    // The route hard-codes `mode: 'verify'` on the insert and passes `approvalId: null` and
+    // `confirmation: null` (server.ts:1578-1586), with a comment naming the schema constraint that
+    // refuses a verify row carrying an approval. A client sending either would be describing a
+    // route that does not exist.
+    await startVerifyRestore(BASE, KEY)
+    const body = only().body as Record<string, unknown>
+    assert.equal(body['confirmation'], undefined)
+    assert.equal(body['approvalId'], undefined)
+  })
+
+  it('offers no way to ask THIS route for a live restore', () => {
+    // An ABSENCE, so it is written down and checked — the same reason POST /v1/events is. The route
+    // answers 400 for `mode: "live"` (server.ts:1552), so a `startLiveRestore` here would be an
+    // error with a confirmation ritual in front of it. This is the assertion that would have caught
+    // the drift: the first version of this client had exactly that function.
+    assert.doesNotMatch(CLIENT_SOURCE, /export function startLiveRestore\b/)
+    assert.doesNotMatch(CLIENT_SOURCE, /mode: input\.mode/)
+    assert.match(CLIENT_SOURCE, /mode: 'verify'/)
+  })
+
+  it('carries the Idempotency-Key the route requires (server.ts:1568)', async () => {
+    await startVerifyRestore(BASE, KEY)
+    assert.equal(only().headers['idempotency-key'], KEY)
+  })
+
+  it('copies the targets rather than sending the caller’s array', async () => {
+    // The page holds `targets` in React state. Serialising the live array would be harmless today
+    // and is the shape of a bug the day anything mutates it between the call and the send.
+    const targets = ['ledger']
+    await startVerifyRestore({ ...BASE, targets }, KEY)
+    targets.push('identity')
+    assert.deepEqual((only().body as Record<string, unknown>)['targets'], ['ledger'])
+  })
+})
+
+describe('a live restore goes through the approval queue, not through /v1/restores', () => {
+  it('raises estate.restore against the BACKUP RUN, carrying the phrase as a param', async () => {
+    // admin-api/src/actions.ts:346 — subjectKind `backup_run`, requiredParams ['confirmation'] —
+    // and the executor reads `ctx.approval.subjectId` as the backup to restore from. A wrong
+    // subject here would have two operators authorise a restore of a different backup than the one
+    // that was on screen.
+    await requestApproval(
+      {
+        action: 'estate.restore',
+        subjectId: BACKUP_ID,
+        reasonCode: 'incident',
+        reason: 'the primary disk failed',
+        params: {
+          confirmation: 'restore mainnet from 2026-08-04T12:00:00Z',
+          targets: ['ledger', 'identity'],
+        },
+      },
+      KEY,
+    )
+    const call = only()
+    assert.equal(call.url.pathname, '/v1/approvals')
+    const body = call.body as Record<string, unknown>
+    assert.equal(body['action'], 'estate.restore')
+    assert.equal(body['subjectId'], BACKUP_ID)
+    const params = body['params'] as Record<string, unknown>
+    // The phrase goes over the wire byte for byte: `requestRestore` compares it with `!==` at
+    // execution time (admin-api/src/backups.ts:645), so a client that trimmed, lowercased or
+    // re-rendered the timestamp would refuse every live restore in the estate.
+    assert.equal(params['confirmation'], 'restore mainnet from 2026-08-04T12:00:00Z')
+    // A LIST, not a comma-joined string: the executor reads it with `Array.isArray` and an absent
+    // value means the whole set, so a string here would restore nothing and typecheck perfectly.
+    assert.deepEqual(params['targets'], ['ledger', 'identity'])
+  })
+})
+
 /* ══════════════════════════════ the whole surface ══════════════════════════════ */
 
 describe('the set of routes this bundle can reach', () => {
   const SOURCE = readFileSync(new URL('../src/lib/admin.ts', import.meta.url), 'utf8')
 
-  it('declares sixteen routes, which is what admin-api serves minus the ones we do not call', () => {
-    // Thirteen, plus the three engagement-treasury routes (docs/ecosystem/21 §6).
-    assert.equal(Object.keys(ADMIN_ROUTES).length, 16)
+  it('declares twenty-three routes, which is what admin-api serves minus the ones we do not call', () => {
+    // Thirteen, plus the three engagement-treasury routes (docs/ecosystem/21 §6), plus the seven
+    // backup and restore routes.
+    assert.equal(Object.keys(ADMIN_ROUTES).length, 23)
   })
 
   it('cites a line number in admin-api/src/server.ts for every one of them', () => {
+    // ── THIS BRIEFLY ACCEPTED A CONTRACT SENTENCE INSTEAD OF A LINE, AND NO LONGER DOES ──────
+    //
+    // The backup module was being built in parallel with the client, so for a while those seven
+    // routes had genuinely nothing to cite — and an uncited route was then indistinguishable from
+    // one somebody had forgotten to cite, so the rule was widened to "a line OR the contract it was
+    // agreed against, and the contract has to name its own path".
+    //
+    // The module landed. The seven were re-read against it, four differences were found and fixed,
+    // and the escape hatch is gone with them. A rule written for a situation that has ended is a
+    // rule the next uncited route hides behind.
     for (const [path, route] of Object.entries(ADMIN_ROUTES)) {
-      assert.ok(route.line > 0, `${path} cites no line`)
+      assert.ok(route.line !== null && route.line > 0, `${path} cites no line`)
+      assert.equal(route.contract, undefined, `${path} still carries a contract sentence`)
       assert.match(route.method, /^(GET|POST|PUT|DELETE)$/, `${path} has no method`)
     }
   })
+
 
   it('exercises every declared route in this suite', async () => {
     // Each declared path is called once above. If a route is added to the client and never tested,
@@ -566,7 +814,20 @@ describe('the set of routes this bundle can reach', () => {
         .replace(/\/v1\/broadcasts\/[^/]+$/, '/v1/broadcasts/:id')
         .replace(/\/v1\/flags\/[^/]+$/, '/v1/flags/:key')
         .replace(/\/v1\/engagement\/policies\/[^/]+$/, '/v1/engagement/policies/:service')
-      exercised.add(call.method === 'POST' && (generic === '/v1/approvals' || generic === '/v1/broadcasts') ? `${generic}#post` : generic)
+        // `settings` is a LITERAL under /v1/backups and sits in the same slot as an id. Excluded
+        // by name rather than by ordering luck: a rewrite that collapsed it to `:id` would report
+        // the settings route as exercised when it never was, and would report the detail route as
+        // exercised when only the settings call had been made — wrong in both directions at once.
+        .replace(/\/v1\/backups\/(?!settings$)[^/]+$/, '/v1/backups/:id')
+      const POSTS = ['/v1/approvals', '/v1/broadcasts', '/v1/backups', '/v1/restores']
+      const PUTS = ['/v1/backups/settings']
+      exercised.add(
+        call.method === 'POST' && POSTS.includes(generic)
+          ? `${generic}#post`
+          : call.method === 'PUT' && PUTS.includes(generic)
+            ? `${generic}#put`
+            : generic,
+      )
     }
 
     await record(() => loadEstate())
@@ -590,6 +851,20 @@ describe('the set of routes this bundle can reach', () => {
     await record(() => loadEngagementPolicies())
     await record(() => loadEngagementReport())
     await record(() => lowerEngagementPolicy('foresight', { transferCapShards: '100' }))
+    await record(() => loadBackups())
+    await record(() => loadBackup(BACKUP_ID))
+    await record(() => startBackup({ kind: 'full', reason: 'r' }, KEY))
+    await record(() => loadBackupSettings())
+    await record(() =>
+      saveBackupSettings({
+        rootPath: '/var/backups',
+        retentionCopies: 3,
+        scheduleEnabled: false,
+        scheduleEveryMinutes: 60,
+      }),
+    )
+    await record(() => loadRestores())
+    await record(() => startVerifyRestore({ backupRunId: BACKUP_ID, targets: ['t'], reason: 'r' }, KEY))
 
     assert.deepEqual([...exercised].sort(), Object.keys(ADMIN_ROUTES).sort())
   })

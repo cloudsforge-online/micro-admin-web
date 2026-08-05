@@ -126,10 +126,56 @@ shape (see below), so its `auth.tsx` is dropped in favour of this one rather tha
 | `/support` | Where did this user's money go? | `GET /v1/audit` ×2 — `actor=user:<id>`, and `subjectKind=user&subjectId=<id>` |
 | `/flags` | What is switched on | `GET /v1/flags`, `PUT /v1/flags/:key` |
 | `/broadcasts` | What the estate is telling everyone | `GET /v1/broadcasts`, `POST /v1/broadcasts`, `DELETE /v1/broadcasts/:id` |
+| `/backups` | What exists, what has ever been proved, and what none of it protects against | `GET /v1/backups`, `POST /v1/backups`, `GET /v1/restores`, `GET`/`PUT /v1/backups/settings` |
+| `/backups/:id` | Should I restore this — into a scratch database, or over live data? | `GET /v1/backups/:id`, `GET /v1/backups`, `GET /v1/actions`, `POST /v1/restores` (verify), `POST /v1/approvals` (live) |
 
 Every call carries the `admin-api/src/server.ts` line it was verified against, in a comment beside
 it in `src/lib/admin.ts`. `test/admin.test.ts` asserts the method, path, query, body and headers of
 every one, and that the set of paths exercised is exactly the set declared.
+
+The seven backup and restore routes were written against an agreed contract while `admin-api`'s
+backup module was being built in parallel, and then **re-read against the service when it landed**.
+Four things had moved, and each is recorded where it bites rather than only in one place:
+
+1. **`POST /v1/restores` refuses `mode: "live"`** (server.ts:1552). The only door to a live restore
+   is the approval queue, so `startVerifyRestore` fixes the mode to `verify` and there is
+   deliberately no `startLiveRestore` — a signature accepting both values would offer a call that
+   is a 400 on one of them.
+2. **`GET /v1/backups` serves `estate`**, so the console no longer derives the estate's environment
+   from the runs it can see. That derivation was correct and is gone: a second opinion beside the
+   enforcing service is the copy that goes stale.
+3. **`GET /v1/backups/:id` serves `liveConfirmationPhrase`**, which `requestRestore` compares with
+   `!==`. The screen renders the served string; the local builder is only the fallback.
+4. **`ceilings` is a set of `{min, max}` ranges**, now declared — with an index signature, so a
+   bound the service adds later is rendered rather than silently withheld.
+
+There is also an audit row for each write (`admin.backup.requested`, `admin.restore.requested`), so
+these screens preview what they will record like every other write in this console.
+
+### `/backups` — the two things it exists to be honest about
+
+A backup screen is the easiest screen in an estate to lie with, because every fact on it is
+reassuring by default. Green states, sizes in gibibytes, matching checksums — none of them is
+wrong, and a reader who stops there has concluded something false.
+
+- **A backup nobody has restored is a wish.** `succeeded` means the files were written; it says
+  nothing about whether they read back. So "never verified" is a word, a column and a headline,
+  with the same three-answer shape `chainTone` gives the audit chain.
+- **A second disk in the same machine protects against that disk failing, and nothing else.** Not
+  machine loss, theft, fire, ransomware or `rm -rf`. The protection panel renders admin-api's own
+  `covers` / `doesNotCover` lists verbatim, puts the limits *first*, and carries no tick.
+
+The **custody keyring is deliberately in no backup at all** — its procedure is physical and
+off-site, at `deploy/docs/custody-backup-restore.md` §4. The panel shows that a backup of the
+custody *vault* exists as a count and a date, and nothing else: this client has no route that
+returns a byte of an artefact.
+
+A **live restore is a request, not an action.** The section raises an `estate.restore` approval:
+the operator writes out `restore <environment> from <YYYY-MM-DDTHH:MM:SSZ>` — the exact string
+`requestRestore` compares — and that becomes `params.confirmation` on the request, so the *second*
+operator reads the phrase before they sign it. Nothing is restored by pressing the button, and the
+screen says so. `/backups/:id` is a separate address for the same reason: it is what the first
+operator sends the second.
 
 **`POST /v1/events` is never called.** It is the estate's audit mirror intake: signature-checked
 against `OUTBOX_SIGNING_SECRET` over the exact bytes received, before the body is parsed, and the

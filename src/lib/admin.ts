@@ -197,6 +197,239 @@ export interface Broadcast {
   readonly retractedBy: string | null
 }
 
+/* ══════════════════════════ backup and restore ══════════════════════════ */
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THESE SEVEN WERE WRITTEN AGAINST AN AGREED CONTRACT AND THEN RE-READ AGAINST THE SERVICE.
+ *
+ * `admin-api`'s backup module was being built in parallel with these screens, so for a while they
+ * were the only routes in this client with no `server.ts` line behind them — which is exactly the
+ * situation that produced `wallet/src/pricingclient.ts` calling `GET /v1/quotes` against a service
+ * that has never served it. They now carry their lines, and the re-read moved four things. Each is
+ * recorded where it bites rather than only here, because the next person to compare the two will
+ * be looking at the call, not at this block:
+ *
+ *   1. **`POST /v1/restores` REFUSES `mode: "live"`** (server.ts:1552). The only door to a live
+ *      restore is the approval queue: `estate.restore`, two operators, and the executor at
+ *      `approvals.ts` creates the restore itself. `startVerifyRestore` below is therefore the only
+ *      restore this client can post, and the live path raises an APPROVAL instead.
+ *   2. **`GET /v1/backups` serves `estate`** (server.ts:1350), so this console no longer derives
+ *      the estate's environment from the runs it can see. The service holds the fact; a derivation
+ *      beside it would be a second, unversioned opinion.
+ *   3. **`GET /v1/backups/:id` serves `liveConfirmationPhrase`** (server.ts:1460), built by
+ *      `expectedConfirmation` — the same string `requestRestore` compares with `!==`. The console
+ *      shows the SERVED one for that reason, and keeps its own builder only as a fallback.
+ *   4. **`ceilings` is a set of `{min, max}` ranges** (server.ts:1368-1382), not the flat map the
+ *      contract left unspecified. It is declared below now that it exists.
+ *
+ * The one thing the contract did not specify and the service confirmed: `POST /v1/backups` takes
+ * `kind` (optional, defaulting to `full`) and `reason` (server.ts:1479, 1490).
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+
+/** The estate a backup was taken from. A restore across two of these is refused by the service. */
+export type BackupEnvironment = 'mainnet' | 'testnet' | 'development'
+
+export type BackupKind = 'full' | 'databases' | 'custody' | 'files'
+export const BACKUP_KINDS: readonly BackupKind[] = ['full', 'databases', 'custody', 'files']
+
+export type BackupState = 'queued' | 'running' | 'succeeded' | 'failed' | 'pruned'
+
+/**
+ * One backup run.
+ *
+ * **`totalBytes` is a bigint as a STRING.** A directory of database dumps and vault tarballs
+ * passes 2^53 bytes long before it is remarkable, and `Number('9007199254740993')` is already
+ * wrong. Nothing in this bundle parses it to a number; `formatBytes` in lib/format.ts is bigint
+ * and string work throughout.
+ */
+export interface BackupRun {
+  readonly id: string
+  readonly environment: BackupEnvironment
+  readonly composeProject: string
+  readonly kind: BackupKind
+  readonly state: BackupState
+  readonly requestedBy: string
+  readonly reason: string | null
+  readonly rootPath: string
+  readonly directory: string | null
+  readonly queuedAt: string
+  readonly startedAt: string | null
+  readonly finishedAt: string | null
+  /** Bigint as a string. Never parsed to a number for display maths. */
+  readonly totalBytes: string | null
+  readonly artefactCount: number | null
+  readonly manifestSha256: string | null
+  readonly clusterSystemId: string | null
+  readonly includesCustody: boolean
+  readonly error: string | null
+  /**
+   * When a restore last PROVED this backup, and which one did.
+   *
+   * The single most important field on the row. A backup nobody has restored is a claim about the
+   * future, and `null` here is that claim being unproven rather than a missing value.
+   */
+  readonly verifiedAt: string | null
+  readonly verifiedByRestore: string | null
+}
+
+/**
+ * One file inside a backup.
+ *
+ * **Names and checksums only.** There is no field here that carries contents, and nothing in this
+ * console asks for one: an operator console that could render the inside of a vault tarball is a
+ * console that leaks every key it is meant to be protecting. `bytes` and `entryCount` are bigints
+ * as strings for the same reason `totalBytes` is.
+ */
+export interface Artefact {
+  readonly id: string
+  readonly kind: 'database' | 'vault' | 'files'
+  readonly name: string
+  readonly relPath: string
+  readonly bytes: string
+  readonly sha256: string
+  readonly entryCount: string | null
+}
+
+export type RestoreMode = 'verify' | 'live'
+export type RestoreState = 'queued' | 'running' | 'succeeded' | 'failed' | 'refused'
+
+export interface RestoreRun {
+  readonly id: string
+  readonly backupRunId: string
+  readonly environment: string
+  readonly mode: RestoreMode
+  readonly targets: readonly string[]
+  readonly state: RestoreState
+  readonly requestedBy: string
+  readonly reason: string | null
+  /** The approved two-operator `estate.restore` request. Required by the service for `live`. */
+  readonly approvalId: string | null
+  readonly queuedAt: string
+  readonly startedAt: string | null
+  readonly finishedAt: string | null
+  /** The environment stamped INSIDE the artefacts, which is what the service compares. */
+  readonly artefactEnvironment: string | null
+  readonly checksumsVerified: boolean | null
+  readonly outcome: Record<string, unknown>
+  readonly error: string | null
+}
+
+/**
+ * What the backup destination actually protects against, in the service's own words.
+ *
+ * `covers` and `doesNotCover` are served rather than written here on purpose. The console's job is
+ * to render them plainly and refuse to dress them up — see `components/protection.tsx`.
+ * `custodyKeyringIncluded` is typed as the literal `false` because the contract types it that way:
+ * it is not a flag that might one day be true, it is a statement.
+ */
+export interface Protection {
+  readonly destinationDevice: string
+  readonly sameHost: boolean
+  readonly covers: readonly string[]
+  readonly doesNotCover: readonly string[]
+  readonly custodyKeyringIncluded: false
+  readonly custodyKeyringNote: string
+}
+
+export interface BackupSettings {
+  readonly rootPath: string
+  readonly retentionCopies: number
+  /** Bigint as a string. */
+  readonly ceilingBytes: string
+  /** Bigint as a string. */
+  readonly minFreeBytes: string
+  readonly scheduleEnabled: boolean
+  readonly scheduleEveryMinutes: number
+  readonly verifyEnabled: boolean
+  readonly verifyEveryMinutes: number
+  readonly updatedAt: string
+  readonly updatedBy: string
+}
+
+/**
+ * The bounds `admin-api` enforces on the settings above — `CEILINGS`, admin-api/src/backups.ts:179,
+ * served at **server.ts:1368-1382**.
+ *
+ * A pair per field rather than a single number, because both ends are real: a retention of 400
+ * copies and a schedule of one minute are both refused. The two byte figures arrive as decimal
+ * STRINGS for the same reason `ceilingBytes` does on the settings themselves — they are `bigint`
+ * in the service.
+ */
+export interface Bound<T> {
+  readonly min: T
+  readonly max: T
+}
+
+export interface BackupCeilings {
+  readonly retentionCopies: Bound<number>
+  /** Bigint bounds, as decimal strings. */
+  readonly ceilingBytes: Bound<string>
+  /** Bigint bounds, as decimal strings. */
+  readonly minFreeBytes: Bound<string>
+  readonly scheduleEveryMinutes: Bound<number>
+  readonly verifyEveryMinutes: Bound<number>
+  /**
+   * A bound `admin-api` adds later, and this console has not been rebuilt for.
+   *
+   * ── WHY AN INDEX SIGNATURE BESIDE FIVE NAMED FIELDS, WHICH LOOKS LIKE HAVING IT BOTH WAYS ────
+   *
+   * It is not a hedge about the shape; the five above are the shape, and they typecheck. It is
+   * about the direction the two failures point in. A settings form that renders only the fields
+   * this bundle knew about at build time WITHDRAWS any bound the service has started enforcing —
+   * and the operator meets it as a 400 with no explanation on screen. There is no equivalent cost
+   * to rendering one extra row.
+   *
+   * So the renderer walks the object (`ceilingRows`, lib/backups.ts) and the type says such a walk
+   * is legitimate rather than requiring a cast to make it compile. A cast would have hidden exactly
+   * this, which is the point: the honest widening is in the type, not at the call site.
+   */
+  readonly [bound: string]: Bound<number> | Bound<string> | undefined
+}
+
+/**
+ * Which estate this is, as the SERVICE says it is — `estate_identity`, served at server.ts:1350.
+ *
+ * ── WHY THIS BEING SERVED MATTERS MORE THAN IT LOOKS ──────────────────────────────────────────
+ *
+ * `requestRestore` (admin-api/src/backups.ts:608-622) reads this row and refuses a restore whose
+ * backup was taken in a different environment, with `EnvironmentMismatchError`. So this is not a
+ * label: it is one half of the comparison that decides whether a restore happens, and the console
+ * puts it beside the other half so the operator sees the refusal coming.
+ *
+ * `environment` is nullable because an estate that has never claimed an identity has none — and in
+ * that state `requestRestore` refuses every restore outright rather than guessing. The console
+ * renders the absence rather than a plausible default.
+ */
+export interface EstateIdentity {
+  readonly environment: string | null
+  readonly composeProject: string
+}
+
+export interface BackupsPage {
+  readonly backups: readonly BackupRun[]
+  readonly settings: BackupSettings
+  readonly protection: Protection
+  readonly estate: EstateIdentity
+}
+
+export interface BackupDetail {
+  readonly backup: BackupRun
+  readonly artefacts: readonly Artefact[]
+  readonly restores: readonly RestoreRun[]
+  /**
+   * The exact phrase a live restore's `confirmation` must equal.
+   *
+   * Served rather than composed by the console (server.ts:1460), and USED rather than merely
+   * compared: `requestRestore` checks it with `!==` (backups.ts:645), so a client that rendered its
+   * own rendering of the same timestamp would refuse every live restore in the estate the day the
+   * two spellings diverged by one character. `restoreConfirmationPhrase` in lib/gate.ts survives
+   * only as the fallback for a response that does not carry this.
+   */
+  readonly liveConfirmationPhrase?: string
+}
+
 /* ══════════════════════════════ the route table ══════════════════════════════ */
 
 /**
@@ -206,7 +439,9 @@ export interface Broadcast {
  * path here is never exercised. A parameterised segment is written as it appears in the service's
  * own `define(...)` call, so the two can be compared by eye as well as by test.
  */
-export const ADMIN_ROUTES: Readonly<Record<string, { method: string; line: number }>> =
+export const ADMIN_ROUTES: Readonly<
+  Record<string, { method: string; line: number | null; contract?: string }>
+> =
   Object.freeze({
     // Re-read against admin-api at 25beaea+bc88503, when the engagement routes shifted every
     // line below them. A citation that has drifted is worse than none: it is checkable, and it
@@ -228,6 +463,20 @@ export const ADMIN_ROUTES: Readonly<Record<string, { method: string; line: numbe
     '/v1/engagement/policies': { method: 'GET', line: 956 },
     '/v1/engagement/policies/:service': { method: 'PUT', line: 984 },
     '/v1/engagement/report': { method: 'GET', line: 1046 },
+    // ── Backup and restore. Agreed as a contract, then re-read against the service. ────────────
+    //
+    // `/v1/backups/settings` is DECLARED BEFORE `/v1/backups/:id` so a reader sees the collision
+    // rather than discovering it: `settings` occupies the id slot. `admin-api` defines them in the
+    // same order (server.ts:1359 before :1445), which is what makes the literal win.
+    '/v1/backups': { method: 'GET', line: 1332 },
+    '/v1/backups#post': { method: 'POST', line: 1473 },
+    '/v1/backups/settings': { method: 'GET', line: 1359 },
+    '/v1/backups/settings#put': { method: 'PUT', line: 1387 },
+    '/v1/backups/:id': { method: 'GET', line: 1445 },
+    '/v1/restores': { method: 'GET', line: 1520 },
+    // Verify only. `mode: "live"` is a 400 here by design (server.ts:1552), and the live path goes
+    // through `/v1/approvals#post` above with action `estate.restore`.
+    '/v1/restores#post': { method: 'POST', line: 1546 },
   })
 
 /**
@@ -441,7 +690,18 @@ export interface ApprovalRequestInput {
   readonly subjectId: string
   readonly reasonCode: string
   readonly reason: string
-  readonly params: Record<string, string | boolean>
+  /**
+   * ── WHY A LIST IS ALLOWED HERE, WHEN THE SERVICE CHECKS FOR `string | boolean` ───────────────
+   *
+   * That check is on `spec.requiredParams` ONLY (server.ts:925-929): a required parameter must be a
+   * string or a boolean, and everything else in `params` is stored as the JSON it is.
+   * `estate.restore` requires `confirmation` — a string — and its executor reads an OPTIONAL
+   * `targets` array (`admin-api/src/approvals.ts`, `Array.isArray(rawTargets)`), where an absent
+   * value means the whole set. A `Record<string, string | boolean>` could not express that, and the
+   * alternative — a comma-joined string the executor would never split — would send a request that
+   * typechecks and restores nothing.
+   */
+  readonly params: Record<string, string | boolean | readonly string[]>
 }
 
 export function requestApproval(
@@ -703,4 +963,195 @@ export function lowerEngagementPolicy(
     `/v1/engagement/policies/${encodeURIComponent(service)}`,
     { ...withSignal(opts), method: 'PUT', body: { ...input } },
   )
+}
+
+/* ══════════════════════════ backup and restore ══════════════════════════ */
+
+/**
+ * The backup runs, the settings they were taken under, and what the destination protects against.
+ *
+ * `GET /v1/backups?limit=` — **admin-api/src/server.ts:1332**.
+ *
+ * Three things in one response rather than three calls, and the console leans on that: an operator
+ * reading a list of green rows and a list of what those rows do NOT protect against must be
+ * reading one observation, not two taken a second apart.
+ */
+export function loadBackups(
+  query: { limit?: number } = {},
+  opts: Signal = {},
+): Promise<BackupsPage> {
+  return api<BackupsPage>('/v1/backups', {
+    ...withSignal(opts),
+    query: { ...(query.limit !== undefined ? { limit: query.limit } : {}) },
+  })
+}
+
+/**
+ * One backup run, its files, and every restore ever attempted from it.
+ *
+ * `GET /v1/backups/:id` — **admin-api/src/server.ts:1445**.
+ *
+ * The `restores` half is what makes `verifiedAt` legible rather than magic: an operator can see
+ * which run proved this backup, in which mode, and whether its checksums matched.
+ */
+export function loadBackup(id: string, opts: Signal = {}): Promise<BackupDetail> {
+  return api<BackupDetail>(`/v1/backups/${encodeURIComponent(id)}`, withSignal(opts))
+}
+
+/**
+ * Take a backup now.
+ *
+ * `POST /v1/backups` — **admin-api/src/server.ts:1473**. An `Idempotency-Key` is required
+ * (server.ts:1479).
+ *
+ * The body was the one thing the agreed contract did not specify, and the two fields sent here —
+ * read off `BackupRun`'s own declared fields at the time — are the two the service reads:
+ * `kind` (server.ts:1479, optional and defaulting to `full`) and `reason` (server.ts:1490). The
+ * kind is offered as a choice rather than defaulted, because the type has four values and an
+ * operator taking a backup before a migration means a different one from an operator rehearsing.
+ *
+ * Nothing else is sent. `requestedBy` in particular is NOT a field: `admin-api` derives the actor
+ * from the verified bearer on every mutating route, and a client that supplied it would be
+ * offering an act-as-anyone primitive on the one screen that can overwrite the money data.
+ */
+export function startBackup(
+  input: { kind: BackupKind; reason: string },
+  idempotencyKey: string,
+  opts: Signal = {},
+): Promise<{ backup: BackupRun }> {
+  return api<{ backup: BackupRun }>('/v1/backups', {
+    ...withSignal(opts),
+    method: 'POST',
+    headers: { 'idempotency-key': idempotencyKey },
+    body: { kind: input.kind, reason: input.reason },
+  })
+}
+
+/**
+ * The settings, and the bounds the service enforces on them.
+ *
+ * `GET /v1/backups/settings` — **admin-api/src/server.ts:1359**.
+ *
+ * Called separately from `loadBackups` even though that route also returns `settings`, because the
+ * CEILINGS are only here — and a settings form that showed the values without the bounds would let
+ * an operator type a number the service will refuse and learn about it afterwards.
+ */
+export function loadBackupSettings(
+  opts: Signal = {},
+): Promise<{ settings: BackupSettings; ceilings: BackupCeilings; protection: Protection }> {
+  return api<{ settings: BackupSettings; ceilings: BackupCeilings; protection: Protection }>(
+    '/v1/backups/settings',
+    withSignal(opts),
+  )
+}
+
+/**
+ * Change the settings.
+ *
+ * `PUT /v1/backups/settings` — **admin-api/src/server.ts:1387**.
+ *
+ * **No `Idempotency-Key`, and the service agrees**: it wraps neither this route nor the reads,
+ * only the two POSTs. That matches the shape of the route — a partial update of a single settings
+ * row, where a retry writes the same values and the audit records `admin.backup.settings.changed`
+ * either way (server.ts:1427) — and it matches how this console already treats
+ * `PUT /v1/flags/:key`.
+ *
+ * ── Only the four fields the form edits are sent, and the route is happy with that ────────────
+ *
+ * `admin-api` builds its change set from whichever fields are PRESENT (server.ts:1393-1414) and
+ * answers 400 only when none is. So omitting `ceilingBytes`, `minFreeBytes` and the verification
+ * schedule leaves them untouched rather than clearing them — which is what makes it safe not to
+ * echo them back. Echoing them WOULD be unsafe: a form opened before a bound was tightened would
+ * overwrite the tightening, which is the lost update, on the settings that decide whether there is
+ * a backup at all.
+ */
+export interface BackupSettingsInput {
+  readonly rootPath: string
+  readonly retentionCopies: number
+  readonly scheduleEnabled: boolean
+  readonly scheduleEveryMinutes: number
+}
+
+export function saveBackupSettings(
+  input: BackupSettingsInput,
+  opts: Signal = {},
+): Promise<{ settings: BackupSettings }> {
+  return api<{ settings: BackupSettings }>('/v1/backups/settings', {
+    ...withSignal(opts),
+    method: 'PUT',
+    body: {
+      rootPath: input.rootPath,
+      retentionCopies: input.retentionCopies,
+      scheduleEnabled: input.scheduleEnabled,
+      scheduleEveryMinutes: input.scheduleEveryMinutes,
+    },
+  })
+}
+
+/** Every restore ever attempted, newest first. `GET /v1/restores` — **server.ts:1520**. */
+export function loadRestores(
+  query: { limit?: number } = {},
+  opts: Signal = {},
+): Promise<{ restores: readonly RestoreRun[] }> {
+  return api<{ restores: readonly RestoreRun[] }>('/v1/restores', {
+    ...withSignal(opts),
+    query: { ...(query.limit !== undefined ? { limit: query.limit } : {}) },
+  })
+}
+
+/**
+ * Restore into a throwaway scratch database, prove the artefacts read back, and drop it.
+ *
+ * `POST /v1/restores` — **admin-api/src/server.ts:1546**. An `Idempotency-Key` is required
+ * (server.ts:1568).
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * **THERE IS NO `startLiveRestore`, AND THE ABSENCE IS THE SHAPE OF THE SERVICE.**
+ *
+ * The contract these screens were first written to had one route and two modes. The service that
+ * landed **refuses `mode: "live"` at this route outright** (server.ts:1552-1558), answering 400
+ * with the route to use instead — exactly as a read action is refused by `POST /v1/approvals` with
+ * the GET to call. The only door to a live restore is the approval queue: `estate.restore`, two
+ * operators, and `approvals.ts`'s executor creates the restore row itself with the approval id on
+ * it.
+ *
+ * So this function fixes `mode` to `verify` rather than taking it as a parameter. A signature that
+ * accepted `'verify' | 'live'` would offer a call that is a 400 on one of its two values, and a
+ * console built on it would walk an operator through a confirmation ritual to reach an error
+ * message. `requestApproval` above is what the live path calls.
+ *
+ * ── Why the asymmetry is load-bearing rather than lenient ─────────────────────────────────────
+ *
+ * The service's own comment (server.ts:1533-1545): a verify touches nothing live, "so it needs one
+ * operator and no ceremony — and that asymmetry is load-bearing rather than lenient … if the only
+ * available restore were the terrifying one, no restore would ever be rehearsed and every backup
+ * would stay a wish." This console follows it: the safe restore is one explained click.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export interface VerifyRestoreInput {
+  readonly backupRunId: string
+  /** Artefact names. An empty list is the service's "everything" (server.ts:1564). */
+  readonly targets: readonly string[]
+  readonly reason: string
+}
+
+export function startVerifyRestore(
+  input: VerifyRestoreInput,
+  idempotencyKey: string,
+  opts: Signal = {},
+): Promise<{ restore: RestoreRun }> {
+  return api<{ restore: RestoreRun }>('/v1/restores', {
+    ...withSignal(opts),
+    method: 'POST',
+    headers: { 'idempotency-key': idempotencyKey },
+    body: {
+      backupRunId: input.backupRunId,
+      // A literal, not a parameter. See the block above.
+      mode: 'verify',
+      // Copied: the caller holds this in React state, and serialising the live array is the shape
+      // of a bug the day anything mutates it between the call and the send.
+      targets: [...input.targets],
+      reason: input.reason,
+    },
+  })
 }

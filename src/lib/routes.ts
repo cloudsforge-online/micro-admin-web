@@ -51,6 +51,12 @@ export const ROUTES: readonly ConsoleRoute[] = [
   { path: 'engagement', label: 'Engagement', wildcard: false },
   { path: 'flags', label: 'Flags', wildcard: false },
   { path: 'broadcasts', label: 'Broadcasts', wildcard: false },
+  // Backups and restores. A WILDCARD, because `/backups/<uuid>` is where the restore lives — and
+  // that address is not a convenience. A live restore needs an approved two-operator
+  // `estate.restore` request, so the operator who wants one has to send somebody else the thing
+  // they are asking about: which backup, from when, what is in it, and whether anything has ever
+  // restored it. That is a URL, for the same reason `/approvals/<uuid>` is one.
+  { path: 'backups', label: 'Backups', wildcard: true },
   // ── The Foresight operator panel, folded in at P13 ──────────────────────────────────────────
   //
   // One top-level segment owning everything beneath it, rather than three siblings — `/foresight`

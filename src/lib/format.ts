@@ -239,6 +239,141 @@ export function chainTone(input: { ok: boolean; breaks: number; everVerified: bo
   return { tone: 'good', glyph: '✓', word: 'VERIFIED' }
 }
 
+/* ══════════════════════════ backup and restore ══════════════════════════ */
+
+/*
+ * `UINT` and `groupDigits` are declared further down, with the Foresight helpers that first needed
+ * them. Neither is Foresight-specific — one refuses a string that is not a run of digits, the
+ * other groups digits in threes without going near `Intl.NumberFormat`, which takes a `number` —
+ * so they are shared rather than copied. A second `/^\d+$/` in this file would be the beginning of
+ * two rules about what counts as a number.
+ */
+
+/** The five states of a backup run. `BackupRun.state` in lib/admin.ts. */
+export function backupTone(state: string): Tone {
+  if (state === 'succeeded') return { tone: 'good', glyph: '✓', word: 'SUCCEEDED' }
+  if (state === 'running') return { tone: 'warn', glyph: '◷', word: 'RUNNING' }
+  if (state === 'queued') return { tone: 'warn', glyph: '◷', word: 'QUEUED' }
+  if (state === 'failed') return { tone: 'crit', glyph: '■', word: 'FAILED' }
+  // Pruned is not a failure and it is not nothing: the run happened, and its files are gone. A
+  // console that rendered it as mute-and-unlabelled would let an operator plan a restore from a
+  // directory that no longer exists.
+  if (state === 'pruned') return { tone: 'mute', glyph: '⊘', word: 'PRUNED' }
+  return { tone: 'mute', glyph: '?', word: state.toUpperCase() }
+}
+
+/** The five states of a restore run. `RestoreRun.state` in lib/admin.ts. */
+export function restoreTone(state: string): Tone {
+  if (state === 'succeeded') return { tone: 'good', glyph: '✓', word: 'SUCCEEDED' }
+  if (state === 'running') return { tone: 'warn', glyph: '◷', word: 'RUNNING' }
+  if (state === 'queued') return { tone: 'warn', glyph: '◷', word: 'QUEUED' }
+  if (state === 'failed') return { tone: 'crit', glyph: '■', word: 'FAILED' }
+  // REFUSED is the service declining to act — an environment mismatch, a missing approval — and it
+  // is the same tone `outcomeTone` gives a refusal, because it means the same thing: nothing
+  // happened, and the reason is worth reading.
+  if (state === 'refused') return { tone: 'warn', glyph: '⊘', word: 'REFUSED' }
+  return { tone: 'mute', glyph: '?', word: state.toUpperCase() }
+}
+
+/**
+ * Whether anything has ever PROVED this backup, which is a different question from whether it ran.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * A BACKUP NOBODY HAS RESTORED IS A WISH.
+ *
+ * The same three-answer shape as `chainTone`, and for the same reason it exists there: a backup
+ * that verifies and a backup that has NEVER BEEN VERIFIED are different facts, and reporting the
+ * second as the first is reporting the absence of evidence as evidence of absence. `succeeded`
+ * means the files were written. It says nothing whatsoever about whether they read back.
+ *
+ * The third answer is for a run with no artefacts a restore could have proved — queued, running,
+ * failed, or pruned. Calling those "never verified" would put a warning on every row in a healthy
+ * list and teach an operator to read past the one that matters.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function verificationTone(input: { verifiedAt: string | null; state: string }): Tone {
+  if (input.verifiedAt !== null && input.verifiedAt.length > 0) {
+    return { tone: 'good', glyph: '✓', word: 'VERIFIED BY RESTORE' }
+  }
+  if (input.state === 'succeeded') return { tone: 'warn', glyph: '▲', word: 'NEVER VERIFIED' }
+  return { tone: 'mute', glyph: '·', word: 'NOTHING TO VERIFY' }
+}
+
+/** 1024, as a bigint, because every divisor below one is one. */
+const KIB = 1024n
+const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'] as const
+
+/**
+ * A byte count, from a bigint-as-string, without ever going through `Number`.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * `BackupRun.totalBytes` AND `Artefact.bytes` ARE STRINGS BECAUSE THEY ARE bigint COLUMNS.
+ *
+ * A directory of database dumps and vault tarballs passes 2^53 bytes long before it is
+ * remarkable, and past that point `Number(s)` silently returns a different number — so
+ * `Number(bytes) / 1024 ** 3` is a size that is wrong in the direction nobody checks, on the one
+ * screen where the size is the evidence that the backup contains anything at all.
+ *
+ * So the whole computation is bigint. The two decimal places are produced by scaling into
+ * hundredths BEFORE the final divide, and the remainder is CUT rather than rounded — the same
+ * decision `formatWei` records, and the safe direction here too: understating a size by less than
+ * the last displayed digit can never make an empty backup look populated.
+ *
+ * Anything that is not a run of digits returns null rather than being coerced. `BigInt('')` is
+ * `0n`, and "0 B" is precisely the reading a missing size must never produce.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function formatBytes(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  const raw = value.trim()
+  if (!UINT.test(raw)) return null
+
+  let n = BigInt(raw)
+  // Below a kibibyte there is nothing to scale and no fraction worth showing.
+  if (n < KIB) return `${groupDigits(raw)} B`
+
+  let unit = 0
+  // Stop while `n` is still under 1024^2, so the last divide below has two whole digits of
+  // precision left to take its hundredths from.
+  while (n >= KIB * KIB && unit < BYTE_UNITS.length - 2) {
+    n /= KIB
+    unit += 1
+  }
+  const hundredths = (n * 100n) / KIB
+  unit += 1
+  const whole = hundredths / 100n
+  const fraction = hundredths % 100n
+  return `${groupDigits(whole.toString())}.${fraction.toString().padStart(2, '0')} ${
+    BYTE_UNITS[unit] ?? BYTE_UNITS[BYTE_UNITS.length - 1]
+  }`
+}
+
+/** The exact count, grouped, for the title beside the human size. Null when it is not a number. */
+export function exactBytes(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  const raw = value.trim()
+  return UINT.test(raw) ? `${groupDigits(raw)} bytes` : null
+}
+
+/**
+ * An instant as `2026-08-04T12:00:00Z` — seconds, UTC, no fractional part.
+ *
+ * **This is a wire format, not a reading format**, and the difference matters more here than
+ * anywhere else in this file: it is the exact spelling of the timestamp inside the phrase
+ * `admin-api` compares a live restore's `confirmation` against, byte for byte. `timestamp()`
+ * renders in the reader's locale and would produce a phrase the service rejects; `utcStamp()`
+ * renders `2026-08-04 12:00 UTC`, which is a different string again and drops the seconds.
+ *
+ * Null for anything unparseable, and the caller must then refuse to offer the action rather than
+ * ask an operator to type a phrase this console could not construct.
+ */
+export function utcSecondStamp(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return null
+  return `${at.toISOString().slice(0, 19)}Z`
+}
+
 /**
  * A hash, shortened for a table but never silently.
  *

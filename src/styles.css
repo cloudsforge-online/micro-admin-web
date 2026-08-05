@@ -1437,3 +1437,127 @@ a.aw-sources__title {
   display: block;
   color: var(--cf-fg-mute);
 }
+
+/* --------------------------- backups and restores --------------------------- */
+
+/*
+ * THE HONESTY PANEL HAS NO SUCCESS TINT, AND THAT IS A DECISION RATHER THAN AN OMISSION.
+ *
+ * Every other panel in this console may carry a tone. This one may not: a green edge above a list
+ * of what the backup does NOT protect against would be the stylesheet supplying the conclusion the
+ * words refuse to. It is a strong border and nothing else, and the only coloured thing inside it
+ * is the warn note when the destination is a second disk in the same machine.
+ */
+.aw-honesty {
+  border-color: var(--cf-line-strong);
+}
+
+.aw-honesty__lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+  margin-top: 0.9rem;
+}
+
+/* Stacked on a narrow screen, and "does not protect" stays first — the DOM order is the reading
+   order, and the flattering order is the other one. */
+@media (max-width: 46rem) {
+  .aw-honesty__lists {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aw-honesty__heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+.aw-honesty__list--no .aw-honesty__heading {
+  color: var(--cf-warn);
+}
+
+.aw-honesty__items {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.aw-honesty__empty {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--cf-fg-mute);
+}
+
+.aw-honesty__custody {
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--cf-line);
+  font-size: 0.9rem;
+}
+
+.aw-honesty__custody p {
+  margin: 0 0 0.6rem;
+}
+
+/* The two environments, beside each other, so a mismatch is seen rather than deduced. */
+.aw-envs__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 0.6rem 0 0.9rem;
+}
+
+@media (max-width: 40rem) {
+  .aw-envs__pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aw-envs__side {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  background: var(--cf-bg-raised);
+}
+
+.aw-envs__label {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+.aw-envs__value {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.15rem;
+}
+
+/*
+ * The live-restore setup, which is the frame the typed-phrase gate sits inside.
+ *
+ * A danger border on the WHOLE section rather than only on `.aw-danger`, because the target
+ * chooser and the approval-id field above it are part of the same act — an operator who has
+ * scrolled past the heading must still be able to tell which of the two restore sections they are
+ * filling in.
+ */
+.aw-live {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--cf-danger);
+  border-radius: 10px;
+  background: var(--cf-bg-raised);
+}
+
+.aw-bounds {
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--cf-line);
+}

@@ -31,7 +31,8 @@
  * Everything here is a pure function, so `test/gate.test.ts` proves every refusal in every
  * direction without rendering anything.
  */
-import type { Approval, ApprovalState } from './admin.ts'
+import type { Approval, ApprovalState, BackupRun, RestoreMode } from './admin.ts'
+import { utcSecondStamp } from './format.ts'
 
 /* ══════════════════════════════ the confirmation phrase ══════════════════════════════ */
 
@@ -204,6 +205,220 @@ function alreadyDecided(approval: Approval): string {
   return `This request is ${states[approval.state]}. A decision is made once.`
 }
 
+/* ══════════════════════════════ restoring over live data ══════════════════════════════ */
+
+/**
+ * The phrase an operator must write out before a LIVE restore will be sent.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THIS ONE IS NOT THIS CONSOLE'S INVENTION. THE SERVICE COMPARES IT WITH `!==`.
+ *
+ * `confirmationPhrase` above is a client-side ceremony: `admin-api` never sees it, and its exact
+ * words are this console's choice. This is the opposite. A live restore's `confirmation` must
+ * equal, exactly,
+ *
+ *     restore <environment> from <the backup's queuedAt as YYYY-MM-DDTHH:MM:SSZ>
+ *
+ * and `requestRestore` compares it with `!==` (admin-api/src/backups.ts:645). Getting the format
+ * wrong is not a cosmetic bug — it is every live restore in the estate being refused, discovered
+ * during the incident that made somebody need one.
+ *
+ * **So this is the FALLBACK, not the source.** `GET /v1/backups/:id` serves the phrase the service
+ * itself will compare (`expectedConfirmation`, server.ts:1460), and the screen uses that. This
+ * function reproduces it from the same fields — `utcSecondStamp` matches the service's own
+ * `toISOString().slice(0, 19) + 'Z'` — so a response without the field still yields a usable
+ * phrase, and `test/backups.test.ts` pins the spelling against the service's.
+ *
+ * ── Why the operator types it rather than confirming it ───────────────────────────────────────
+ *
+ * Because it names the three facts a mistaken restore gets wrong: WHAT is being restored, FROM
+ * WHEN, and INTO WHICH ESTATE. "restore mainnet from 2026-08-04T12:00:00Z" cannot be written by
+ * somebody who has not read which environment and which backup — and the environment is the word
+ * that stands between a rehearsal on testnet and overwriting customer balances.
+ *
+ * Null when the environment is blank or the timestamp will not parse. The caller must then refuse
+ * to offer the action: asking an operator to type a phrase this console could not construct would
+ * be asking them to guess at the one string the service checks.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function restoreConfirmationPhrase(
+  environment: string,
+  queuedAt: string,
+): string | null {
+  const stamp = utcSecondStamp(queuedAt)
+  const where = environment.trim()
+  if (stamp === null || where.length === 0) return null
+  return `restore ${where} from ${stamp}`
+}
+
+export interface RestoreGate {
+  /** True when this console may offer the control at all. */
+  readonly offered: boolean
+  /** Why not, in the operator's words. Null when offered. */
+  readonly reason: string | null
+  /**
+   * The refusal is "you have not finished filling this in" rather than "this can never run here".
+   *
+   * ── WHY THE TWO ARE DISTINGUISHED, AND WHY THE CALLER MUST ────────────────────────────────
+   *
+   * They lead to opposite renderings, and getting it wrong produces a screen with no way out. A
+   * STRUCTURAL refusal — a pruned run, an environment mismatch — replaces the controls with a
+   * sentence, because there is nothing an operator can type that would change it. An INPUT
+   * refusal must leave the controls on screen: hiding the approval-id field because the approval
+   * id is empty is a form that removes the box you were about to fill in.
+   *
+   * That trap is not hypothetical; it is what the first version of this screen did.
+   */
+  readonly needsOperatorInput: boolean
+  /** The backup was taken from a different estate than the one this console is looking at. */
+  readonly mismatch: boolean
+  /** The phrase for a live restore. Null for `verify`, which the service does not ask one for. */
+  readonly phrase: string | null
+}
+
+/**
+ * May THIS restore be offered, from THIS backup, in THIS mode?
+ *
+ * The checks are in the order an operator would ask them, and each answer gets its own sentence.
+ *
+ * ── Why an unknown estate environment is NOT a refusal ────────────────────────────────────────
+ *
+ * The same decision `decisionGate` makes about an unknown operator principal, for the same reason.
+ * `admin-api` serves no field naming the estate's own environment, so this console derives it from
+ * the backups the estate has taken (see `estateEnvironment` in lib/backups.ts) — and refusing on
+ * the strength of a derivation that came back empty would block a legitimate restore during an
+ * incident. So the control is offered with the comparison shown, and the service remains the thing
+ * that actually refuses: it compares `artefactEnvironment` against the estate it is running in,
+ * which is a fact it holds and this console does not.
+ *
+ * ── Why a MISMATCH is a refusal ───────────────────────────────────────────────────────────────
+ *
+ * Because when the two ARE known and differ, this is not a guess. The service will refuse it, and
+ * a console that let the operator type a confirmation phrase for a mainnet restore of testnet
+ * artefacts has spent their attention to arrive at a 4xx — worse, it has walked them through the
+ * exact ritual that means "I have read this and I mean it" for something that was never going to
+ * happen. The mismatch is named BEFORE the phrase, not after it.
+ */
+export function restoreGate(input: {
+  readonly backup: BackupRun
+  /** What this console believes the estate is. Null when it could not establish it. */
+  readonly estateEnvironment: string | null
+  readonly mode: RestoreMode
+  /**
+   * The reason code chosen for the `estate.restore` request. Only `live` needs one.
+   *
+   * `POST /v1/approvals` validates it against a CLOSED list (admin-api/src/approvals.ts:53-61) and
+   * answers 400 for anything else, so an empty box here is a refusal the console can state rather
+   * than a 400 the operator has to interpret.
+   */
+  readonly reasonCode: string
+  readonly targets: readonly string[]
+}): RestoreGate {
+  const { backup, estateEnvironment, mode } = input
+  const mismatch = estateEnvironment !== null && estateEnvironment !== backup.environment
+  const phrase =
+    mode === 'live' ? restoreConfirmationPhrase(backup.environment, backup.queuedAt) : null
+  const no = (reason: string, needsOperatorInput = false): RestoreGate => ({
+    offered: false,
+    reason,
+    needsOperatorInput,
+    mismatch,
+    phrase,
+  })
+
+  if (backup.state === 'pruned') {
+    return no(
+      'This run has been pruned: the files it wrote are gone, and there is nothing on disk to ' +
+        'restore from. Retention removed them to stay inside the ceiling — pick a later backup.',
+    )
+  }
+  if (backup.state !== 'succeeded') {
+    return no(
+      `This run is ${backup.state}, so it has no complete set of artefacts to restore from. A ` +
+        'restore reads what a finished run wrote; there is nothing yet.',
+    )
+  }
+  if (input.targets.length === 0) {
+    return no(
+      'Choose at least one thing to restore. An empty restore does nothing and records it.',
+      true,
+    )
+  }
+  if (mode === 'live' && mismatch) {
+    return no(
+      `This backup was taken from ${backup.environment} and this estate is ${String(
+        estateEnvironment,
+      )}. admin-api compares the environment stamped inside the artefacts against the estate it ` +
+        'is running in and refuses the pair with EnvironmentMismatchError ' +
+        '(admin-api/src/backups.ts:620), and it is right to: restoring one environment’s data over ' +
+        'another’s is how a rehearsal becomes an incident. Nothing here will raise it.',
+    )
+  }
+  if (mode === 'live' && phrase === null) {
+    return no(
+      'This console cannot build the confirmation phrase for this backup — its queued-at ' +
+        'timestamp did not parse, so there is no way to produce the exact string admin-api ' +
+        'compares. Asking you to guess at it would be worse than refusing.',
+    )
+  }
+  if (mode === 'live' && input.reasonCode.trim().length === 0) {
+    return no(
+      'Choose a reason code. admin-api validates it against a closed list and refuses anything ' +
+        'else, and it is the field the second operator will sort and search this request by.',
+      true,
+    )
+  }
+  return { offered: true, reason: null, needsOperatorInput: false, mismatch, phrase }
+}
+
+/**
+ * What a restore run RECORDS on its own row, beside the audit preview rather than instead of it.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * WHY BOTH, NOW THAT THERE IS AN AUDIT ROW TO CITE.
+ *
+ * The first version of this screen was written against a contract that said nothing about audit
+ * rows, so it rendered these sentences INSTEAD of an `AuditRecordPreview` — naming an action the
+ * service might not write would have told an operator they were signing for a record that does not
+ * exist. The service landed writing `admin.backup.requested` (server.ts:1500) and
+ * `admin.restore.requested` (server.ts:1595), so the preview is real and is rendered.
+ *
+ * These stay, because they describe something the audit row does not: the `restore_runs` row, which
+ * is where `checksumsVerified`, `artefactEnvironment` and the eventual outcome live. The audit says
+ * an operator asked; this says what the estate will be able to tell afterwards.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export function restoreRecordLines(input: {
+  readonly mode: RestoreMode
+  readonly backup: BackupRun
+  readonly targets: readonly string[]
+}): readonly string[] {
+  const what = input.targets.length === 0 ? 'everything in the backup' : input.targets.join(', ')
+  const common = [
+    `A restore row is created against backup ${input.backup.id}, naming the operator who asked for ` +
+      'it, the reason, the mode, and the exact list of targets chosen.',
+    `The targets on this run are: ${what}.`,
+    'It records the environment stamped inside the artefacts, and whether their checksums verified ' +
+      '— so a restore that ran and a restore that ran and matched are distinguishable afterwards.',
+  ]
+  return input.mode === 'live'
+    ? [
+        ...common,
+        'It carries the id of the approval that authorised it, and a partial unique index makes one ' +
+          'approval one restore for ever — so a retry after a lost answer cannot start a second ' +
+          'restore over the top of the first.',
+        'On success the backup is marked verified by this restore. That mark is the only evidence ' +
+          'in the estate that these files read back at all.',
+      ]
+    : [
+        ...common,
+        'No approval id, because nothing live is touched and the service asks for none — a schema ' +
+          'constraint refuses a verify row that names one.',
+        'On success the backup is marked verified by this restore — which is the whole point of ' +
+          'running one.',
+      ]
+}
+
 /* ══════════════════════════════ what will be recorded ══════════════════════════════ */
 
 /**
@@ -261,6 +476,63 @@ export function previewRequest(input: {
       `The row records that you asked for ${input.action} on ${input.subjectKind} ${input.subjectId}, with your reason and reason code.`,
       'It does not record that the action happened. Nothing happens until a second operator approves it.',
       'The request expires if nobody answers it, and the expiry is recorded too.',
+    ],
+  }
+}
+
+/**
+ * The audit row `POST /v1/restores` writes — **admin-api/src/server.ts:1595**.
+ *
+ * Note the SUBJECT: `backup_run` and the backup's id, not the restore's. The row records what was
+ * acted on rather than the record of the acting, exactly as `admin.approval.executed` does
+ * (approvals.ts:350-351), so an operator searching the audit for a backup finds every restore ever
+ * attempted from it.
+ */
+export function previewVerifyRestore(input: {
+  actor: string | null
+  backupId: string
+  targets: readonly string[]
+}): AuditPreview {
+  return {
+    actor: input.actor ?? UNKNOWN_ACTOR,
+    action: 'admin.restore.requested',
+    subjectKind: 'backup_run',
+    subjectId: input.backupId,
+    outcome: 'allowed',
+    reasonCode: null,
+    notes: [
+      'The row records mode "verify", the id of the restore run this queues, and the targets.',
+      'It says the restore was ASKED FOR. Whether the artefacts read back is on the restore row, ' +
+        'and it is not known until the run finishes.',
+      'admin-api serialises restores estate-wide: a second one queued while this is running is ' +
+        'refused out loud rather than queued behind it, because a restore that silently waits is a ' +
+        'restore an operator believes has already happened.',
+    ],
+  }
+}
+
+/**
+ * The audit row `POST /v1/backups` writes — **admin-api/src/server.ts:1500**.
+ */
+export function previewBackupRequest(input: {
+  actor: string | null
+  kind: string
+  environment: string | null
+}): AuditPreview {
+  return {
+    actor: input.actor ?? UNKNOWN_ACTOR,
+    action: 'admin.backup.requested',
+    subjectKind: 'backup_run',
+    subjectId: 'the id of the run this creates',
+    outcome: 'allowed',
+    reasonCode: null,
+    notes: [
+      `The row records that you asked for a ${input.kind} backup of ${
+        input.environment ?? 'this estate'
+      }, with the root path it will be written to.`,
+      'The job and the row commit together, so a backup that is recorded is a backup that was ' +
+        'genuinely queued.',
+      'It does NOT record that the backup is usable. Only a restore establishes that.',
     ],
   }
 }

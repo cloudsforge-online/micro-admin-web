@@ -30,6 +30,8 @@ import { ActionsPage } from './pages/actions.tsx'
 import { ApprovalPage } from './pages/approval.tsx'
 import { ApprovalsPage } from './pages/approvals.tsx'
 import { AuditPage } from './pages/audit.tsx'
+import { BackupPage } from './pages/backup.tsx'
+import { BackupsPage } from './pages/backups.tsx'
 import { BroadcastsPage } from './pages/broadcasts.tsx'
 import { EstatePage } from './pages/estate.tsx'
 import { EngagementPage } from './pages/engagement.tsx'
@@ -119,6 +121,25 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <BroadcastsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="backups"
+              element={
+                <ProtectedRoute>
+                  <BackupsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* The detail page, and the only place a restore can be started. It is a separate
+                address on purpose: a live restore needs an approved two-operator request, so this
+                is what the first operator sends the second. */}
+            <Route
+              path="backups/:id"
+              element={
+                <ProtectedRoute>
+                  <BackupPage />
                 </ProtectedRoute>
               }
             />
