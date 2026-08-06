@@ -77,7 +77,7 @@ export const SCENARIOS: readonly Scenario[] = [
       // The line was 89 and is 95: the P13 Foresight fold and the routes added after this citation
       // was written moved it down. Re-read from source rather than dropped — a citation that has
       // gone stale is still the only pointer anybody has, and deleting it costs more than fixing it.
-      by: 'src/pages/support.tsx, routed at src/app.tsx:95.',
+      by: 'src/pages/support.tsx, routed at src/app.tsx.',
     },
     caveat:
       'Doc 22’s row ends "every read carries an audit record and a reason code". That is a property ' +
@@ -97,8 +97,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Claim 9’s evidence is an operator answering "where did this user’s money go" — and the ' +
       'answer requires rows from ledger, wallet and settlement, none of which reach this database. ' +
       '`admin-api`’s intake is built and properly guarded, but the topic it consumes, ' +
-      '`*.audit.recorded` (`admin-api/src/server.ts:132`), has no producer anywhere in the estate; ' +
-      '`admin-api/README.md:367-368` records the same finding as gap 2. So the cross-service ' +
+      '`*.audit.recorded` (`admin-api/src/server.ts`), has no producer anywhere in the estate; ' +
+      '`admin-api/README.md` records the same finding as gap 2. So the cross-service ' +
       'journey cannot be run at any tier until a producer exists, and asserting it here would be ' +
       'this console certifying itself. BJ-SUP-01..04 assert the thing that IS in this repository’s ' +
       'gift: that the screen says so rather than looking complete.',

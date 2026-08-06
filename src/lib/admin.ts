@@ -25,10 +25,10 @@
  *
  * ── The one route on `admin-api` this console deliberately never calls ────────────────────────
  *
- * `POST /v1/events` (server.ts:497) is the estate's audit mirror intake. Its body is verified
+ * `POST /v1/events` (server.ts) is the estate's audit mirror intake. Its body is verified
  * against `OUTBOX_SIGNING_SECRET` over the exact bytes received, with a timing-safe comparison,
  * BEFORE `JSON.parse` is called on it, and the bearer must additionally hold the exact
- * `admin:audit:write` scope (server.ts:501-510). A browser holds neither the estate secret nor a
+ * `admin:audit:write` scope (server.ts). A browser holds neither the estate secret nor a
  * service scope, and a console that appeared to offer it would be offering a forgery endpoint for
  * the record disputes are settled against. It is absent on purpose and `test/admin.test.ts`
  * asserts its absence.
@@ -45,10 +45,10 @@ import { api, type RequestOptions } from './api.ts'
 
 /* ══════════════════════════════ the wire shapes ══════════════════════════════ */
 
-/** `admin-api/src/estate.ts:35`. */
+/** `admin-api/src/estate.ts`. */
 export type TileStatus = 'ok' | 'degraded' | 'unavailable'
 
-/** `admin-api/src/estate.ts:37-44`. `data` is never null, so a client renders a state. */
+/** `admin-api/src/estate.ts`. `data` is never null, so a client renders a state. */
 export interface Tile<T> {
   readonly status: TileStatus
   readonly upstream: string
@@ -56,7 +56,7 @@ export interface Tile<T> {
   readonly data: T
 }
 
-/** `admin-api/src/estate.ts:56-61`. */
+/** `admin-api/src/estate.ts`. */
 export interface ServiceHealth {
   readonly name: string
   readonly ready: boolean
@@ -64,7 +64,7 @@ export interface ServiceHealth {
   readonly detail: string | null
 }
 
-/** `admin-api/src/estate.ts:63-70`, served by `GET /v1/estate` at server.ts:879. */
+/** `admin-api/src/estate.ts`, served by `GET /v1/estate` at server.ts. */
 export interface EstateView {
   readonly services: Tile<readonly ServiceHealth[]>
   readonly trialBalance: Tile<{ balanced: boolean | null; totalAbsoluteDelta: string | null }>
@@ -74,7 +74,7 @@ export interface EstateView {
   readonly broadcasts: Tile<{ live: number }>
 }
 
-/** `admin-api/src/actions.ts:84-99`, served by `GET /v1/actions` at server.ts:617. */
+/** `admin-api/src/actions.ts`, served by `GET /v1/actions` at server.ts. */
 export interface ActionSpec {
   readonly name: string
   readonly subjectKind: string
@@ -88,15 +88,15 @@ export interface ActionSpec {
 
 export interface ActionCatalogue {
   readonly actions: readonly ActionSpec[]
-  /** `admin-api/src/approvals.ts:53-61` — a CLOSED list; free text is required as well. */
+  /** `admin-api/src/approvals.ts` — a CLOSED list; free text is required as well. */
   readonly reasonCodes: readonly string[]
 }
 
-/** `admin-api/src/approvals.ts:42`. */
+/** `admin-api/src/approvals.ts`. */
 export type ApprovalState = 'pending' | 'approved' | 'rejected' | 'expired'
 export type ExecutionOutcome = 'succeeded' | 'failed'
 
-/** `admin-api/src/approvals.ts:93-112`. */
+/** `admin-api/src/approvals.ts`. */
 export interface Approval {
   readonly id: string
   readonly action: string
@@ -145,7 +145,7 @@ export interface AuditPage {
   readonly nextCursor: string | null
 }
 
-/** One finding from a verification pass. `admin-api/src/audit.ts`, rendered at server.ts:602. */
+/** One finding from a verification pass. `admin-api/src/audit.ts`, rendered at server.ts. */
 export interface ChainBreak {
   readonly kind:
     | 'hash_mismatch'
@@ -157,7 +157,7 @@ export interface ChainBreak {
   readonly detail: string
 }
 
-/** `GET /v1/audit/verify`, server.ts:595-603. Answers 200 whether or not the chain verifies. */
+/** `GET /v1/audit/verify`, server.ts. Answers 200 whether or not the chain verifies. */
 export interface ChainVerification {
   readonly ok: boolean
   readonly checked: number
@@ -168,7 +168,7 @@ export interface ChainVerification {
   readonly breaks: readonly ChainBreak[]
 }
 
-/** `admin-api/src/flags.ts:45-53`. */
+/** `admin-api/src/flags.ts`. */
 export interface FeatureFlag {
   readonly key: string
   readonly enabled: boolean
@@ -179,11 +179,11 @@ export interface FeatureFlag {
   readonly updatedBy: string
 }
 
-/** `admin-api/src/broadcasts.ts:27`. */
+/** `admin-api/src/broadcasts.ts`. */
 export type Severity = 'info' | 'maintenance' | 'incident'
 export const SEVERITIES: readonly Severity[] = ['info', 'maintenance', 'incident']
 
-/** `admin-api/src/broadcasts.ts:45-56`. */
+/** `admin-api/src/broadcasts.ts`. */
 export interface Broadcast {
   readonly id: string
   readonly severity: Severity
@@ -210,21 +210,21 @@ export interface Broadcast {
  * recorded where it bites rather than only here, because the next person to compare the two will
  * be looking at the call, not at this block:
  *
- *   1. **`POST /v1/restores` REFUSES `mode: "live"`** (server.ts:1552). The only door to a live
+ *   1. **`POST /v1/restores` REFUSES `mode: "live"`** (server.ts). The only door to a live
  *      restore is the approval queue: `estate.restore`, two operators, and the executor at
  *      `approvals.ts` creates the restore itself. `startVerifyRestore` below is therefore the only
  *      restore this client can post, and the live path raises an APPROVAL instead.
- *   2. **`GET /v1/backups` serves `estate`** (server.ts:1350), so this console no longer derives
+ *   2. **`GET /v1/backups` serves `estate`** (server.ts), so this console no longer derives
  *      the estate's environment from the runs it can see. The service holds the fact; a derivation
  *      beside it would be a second, unversioned opinion.
- *   3. **`GET /v1/backups/:id` serves `liveConfirmationPhrase`** (server.ts:1460), built by
+ *   3. **`GET /v1/backups/:id` serves `liveConfirmationPhrase`** (server.ts), built by
  *      `expectedConfirmation` — the same string `requestRestore` compares with `!==`. The console
  *      shows the SERVED one for that reason, and keeps its own builder only as a fallback.
- *   4. **`ceilings` is a set of `{min, max}` ranges** (server.ts:1368-1382), not the flat map the
+ *   4. **`ceilings` is a set of `{min, max}` ranges** (server.ts), not the flat map the
  *      contract left unspecified. It is declared below now that it exists.
  *
  * The one thing the contract did not specify and the service confirmed: `POST /v1/backups` takes
- * `kind` (optional, defaulting to `full`) and `reason` (server.ts:1479, 1490).
+ * `kind` (optional, defaulting to `full`) and `reason` (server.ts, 1490).
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 
@@ -349,8 +349,8 @@ export interface BackupSettings {
 }
 
 /**
- * The bounds `admin-api` enforces on the settings above — `CEILINGS`, admin-api/src/backups.ts:179,
- * served at **server.ts:1368-1382**.
+ * The bounds `admin-api` enforces on the settings above — `CEILINGS`, admin-api/src/backups.ts,
+ * served at **server.ts**.
  *
  * A pair per field rather than a single number, because both ends are real: a retention of 400
  * copies and a schedule of one minute are both refused. The two byte figures arrive as decimal
@@ -389,11 +389,11 @@ export interface BackupCeilings {
 }
 
 /**
- * Which estate this is, as the SERVICE says it is — `estate_identity`, served at server.ts:1350.
+ * Which estate this is, as the SERVICE says it is — `estate_identity`, served at server.ts.
  *
  * ── WHY THIS BEING SERVED MATTERS MORE THAN IT LOOKS ──────────────────────────────────────────
  *
- * `requestRestore` (admin-api/src/backups.ts:608-622) reads this row and refuses a restore whose
+ * `requestRestore` (admin-api/src/backups.ts) reads this row and refuses a restore whose
  * backup was taken in a different environment, with `EnvironmentMismatchError`. So this is not a
  * label: it is one half of the comparison that decides whether a restore happens, and the console
  * puts it beside the other half so the operator sees the refusal coming.
@@ -421,8 +421,8 @@ export interface BackupDetail {
   /**
    * The exact phrase a live restore's `confirmation` must equal.
    *
-   * Served rather than composed by the console (server.ts:1460), and USED rather than merely
-   * compared: `requestRestore` checks it with `!==` (backups.ts:645), so a client that rendered its
+   * Served rather than composed by the console (server.ts), and USED rather than merely
+   * compared: `requestRestore` checks it with `!==` (backups.ts), so a client that rendered its
    * own rendering of the same timestamp would refuse every live restore in the estate the day the
    * two spellings diverged by one character. `restoreConfirmationPhrase` in lib/gate.ts survives
    * only as the fallback for a response that does not carry this.
@@ -433,50 +433,60 @@ export interface BackupDetail {
 /* ══════════════════════════════ the route table ══════════════════════════════ */
 
 /**
- * Every path this bundle may request, with the `admin-api/src/server.ts` line that defines it.
+ * Every path this bundle may request, and the method it is requested with.
  *
  * Read by `test/admin.test.ts`, which fails if a call is made to a path that is not here and if a
  * path here is never exercised. A parameterised segment is written as it appears in the service's
- * own `define(...)` call, so the two can be compared by eye as well as by test.
+ * own `define(...)` call in `admin-api/src/server.ts`, so the two can be compared by eye as well
+ * as by test.
+ *
+ * ── EACH OF THESE CARRIED A LINE NUMBER, AND THAT IS WHY THEY KEPT NEEDING RE-READING ──────────
+ *
+ * The comment that stood here recorded the last time: "re-read against admin-api at
+ * 25beaea+bc88503, when the engagement routes shifted every line below them". Twenty-three line
+ * numbers had to be corrected for an edit that added routes and changed nothing this bundle calls.
+ * micro-trade did the same to micro-trade-web a week later by inserting seven lines near its
+ * imports, and seven of nineteen CI failures across the estate on 2026-08-06 were that one shape.
+ *
+ * A line names a position in a file another repository owns and is free to edit, and nothing runs
+ * this suite when admin-api changes — so the citation goes stale silently and surfaces during a
+ * release. Worse than stale: a drifted citation still RESOLVES, so it reads as verified while
+ * pointing at a different route. The path and the method are what this client actually depends on,
+ * and they are checked here in both directions.
  */
-export const ADMIN_ROUTES: Readonly<
-  Record<string, { method: string; line: number | null; contract?: string }>
-> =
+export const ADMIN_ROUTES: Readonly<Record<string, { method: string; contract?: string }>> =
   Object.freeze({
-    // Re-read against admin-api at 25beaea+bc88503, when the engagement routes shifted every
-    // line below them. A citation that has drifted is worse than none: it is checkable, and it
-    // checks out against the wrong thing.
-    '/v1/estate': { method: 'GET', line: 1075 },
-    '/v1/actions': { method: 'GET', line: 638 },
-    '/v1/approvals': { method: 'GET', line: 652 },
-    '/v1/approvals/:id': { method: 'GET', line: 666 },
-    '/v1/approvals#post': { method: 'POST', line: 674 },
-    '/v1/approvals/:id/decision': { method: 'POST', line: 786 },
-    '/v1/audit': { method: 'GET', line: 586 },
-    '/v1/audit/verify': { method: 'GET', line: 608 },
-    '/v1/flags': { method: 'GET', line: 851 },
-    '/v1/flags/:key': { method: 'PUT', line: 857 },
-    '/v1/broadcasts': { method: 'GET', line: 888 },
-    '/v1/broadcasts#post': { method: 'POST', line: 904 },
-    '/v1/broadcasts/:id': { method: 'DELETE', line: 941 },
+    '/v1/estate': { method: 'GET' },
+    '/v1/actions': { method: 'GET' },
+    '/v1/approvals': { method: 'GET' },
+    '/v1/approvals/:id': { method: 'GET' },
+    '/v1/approvals#post': { method: 'POST' },
+    '/v1/approvals/:id/decision': { method: 'POST' },
+    '/v1/audit': { method: 'GET' },
+    '/v1/audit/verify': { method: 'GET' },
+    '/v1/flags': { method: 'GET' },
+    '/v1/flags/:key': { method: 'PUT' },
+    '/v1/broadcasts': { method: 'GET' },
+    '/v1/broadcasts#post': { method: 'POST' },
+    '/v1/broadcasts/:id': { method: 'DELETE' },
     // The engagement treasury — docs/ecosystem/21 §6.
-    '/v1/engagement/policies': { method: 'GET', line: 956 },
-    '/v1/engagement/policies/:service': { method: 'PUT', line: 984 },
-    '/v1/engagement/report': { method: 'GET', line: 1046 },
+    '/v1/engagement/policies': { method: 'GET' },
+    '/v1/engagement/policies/:service': { method: 'PUT' },
+    '/v1/engagement/report': { method: 'GET' },
     // ── Backup and restore. Agreed as a contract, then re-read against the service. ────────────
     //
     // `/v1/backups/settings` is DECLARED BEFORE `/v1/backups/:id` so a reader sees the collision
     // rather than discovering it: `settings` occupies the id slot. `admin-api` defines them in the
-    // same order (server.ts:1359 before :1445), which is what makes the literal win.
-    '/v1/backups': { method: 'GET', line: 1332 },
-    '/v1/backups#post': { method: 'POST', line: 1473 },
-    '/v1/backups/settings': { method: 'GET', line: 1359 },
-    '/v1/backups/settings#put': { method: 'PUT', line: 1387 },
-    '/v1/backups/:id': { method: 'GET', line: 1445 },
-    '/v1/restores': { method: 'GET', line: 1520 },
-    // Verify only. `mode: "live"` is a 400 here by design (server.ts:1552), and the live path goes
+    // same order, which is what makes the literal win.
+    '/v1/backups': { method: 'GET' },
+    '/v1/backups#post': { method: 'POST' },
+    '/v1/backups/settings': { method: 'GET' },
+    '/v1/backups/settings#put': { method: 'PUT' },
+    '/v1/backups/:id': { method: 'GET' },
+    '/v1/restores': { method: 'GET' },
+    // Verify only. `mode: "live"` is a 400 here by design (server.ts), and the live path goes
     // through `/v1/approvals#post` above with action `estate.restore`.
-    '/v1/restores#post': { method: 'POST', line: 1546 },
+    '/v1/restores#post': { method: 'POST' },
   })
 
 /**
@@ -488,7 +498,7 @@ export const ADMIN_ROUTES: Readonly<
  */
 export const REFUSED_ROUTES: Readonly<Record<string, string>> = Object.freeze({
   'POST /v1/events':
-    'the estate audit mirror intake (server.ts:497). Its body is signature-checked against ' +
+    'the estate audit mirror intake (server.ts). Its body is signature-checked against ' +
     'OUTBOX_SIGNING_SECRET before it is parsed, and the bearer must hold the exact ' +
     'admin:audit:write scope — a browser holds neither, and a console that offered it would be ' +
     'offering a forgery endpoint for the record disputes are settled against.',
@@ -505,9 +515,9 @@ function withSignal(opts: Signal): RequestOptions {
 /**
  * The estate view: six tiles, one call, always 200.
  *
- * `GET /v1/estate` — **admin-api/src/server.ts:879**.
+ * `GET /v1/estate` — **admin-api/src/server.ts**.
  *
- * It answers 200 even when an upstream is dead (server.ts:895-897), because the console is read
+ * It answers 200 even when an upstream is dead (server.ts), because the console is read
  * DURING an incident, which is precisely when something is down. A dead upstream marks ONE tile;
  * `estate.ts` composes with `Promise.allSettled` so one rejection cannot discard five answers
  * that had already arrived. This function therefore never treats a degraded tile as a failure.
@@ -519,9 +529,9 @@ export function loadEstate(opts: Signal = {}): Promise<EstateView> {
 /**
  * The action catalogue AND the closed reason-code list, in one call.
  *
- * `GET /v1/actions` — **admin-api/src/server.ts:609**.
+ * `GET /v1/actions` — **admin-api/src/server.ts**.
  *
- * The response includes the BLOCKED entry and its reason (server.ts:612-620: "an operator console
+ * The response includes the BLOCKED entry and its reason (server.ts: "an operator console
  * renders the 501 before the operator hits it, and the reason is the same string the 501
  * carries"). See `catalogue.ts` for what this console does with that.
  */
@@ -540,9 +550,9 @@ export interface ApprovalQuery {
 /**
  * The approval queue.
  *
- * `GET /v1/approvals` — **admin-api/src/server.ts:623**. Query parameters read at
- * server.ts:627-632: `state`, `action`, `requestedBy`, `limit`. `state` is validated against the
- * four-value list at server.ts:1055 and anything else is a 400, so this client sends only a
+ * `GET /v1/approvals` — **admin-api/src/server.ts**. Query parameters read at
+ * server.ts: `state`, `action`, `requestedBy`, `limit`. `state` is validated against the
+ * four-value list at server.ts and anything else is a 400, so this client sends only a
  * declared `ApprovalState`.
  */
 export function loadApprovals(query: ApprovalQuery = {}, opts: Signal = {}): Promise<{ approvals: readonly Approval[] }> {
@@ -560,8 +570,8 @@ export function loadApprovals(query: ApprovalQuery = {}, opts: Signal = {}): Pro
 /**
  * One approval request.
  *
- * `GET /v1/approvals/:id` — **admin-api/src/server.ts:637**. The id is checked against a uuid
- * pattern in the service (`itemIdOf`, server.ts:1086) so a malformed id is a 404 rather than the
+ * `GET /v1/approvals/:id` — **admin-api/src/server.ts**. The id is checked against a uuid
+ * pattern in the service (`itemIdOf`, server.ts) so a malformed id is a 404 rather than the
  * 500 Postgres error 22P02 would otherwise become.
  */
 export function loadApproval(id: string, opts: Signal = {}): Promise<{ approval: Approval }> {
@@ -583,7 +593,7 @@ export interface AuditQuery {
 /**
  * The audit log, newest first.
  *
- * `GET /v1/audit` — **admin-api/src/server.ts:557**. Every filter is read at server.ts:563-570
+ * `GET /v1/audit` — **admin-api/src/server.ts**. Every filter is read at server.ts
  * and each is an equality match on an indexed column: `actor`, `action`, `subjectKind`,
  * `subjectId`, `correlationId`, `source`, plus `before` and `limit`. There is deliberately NO
  * free-text search (`audit.ts` on `readAudit`: a console offering a LIKE over `payload` is a
@@ -612,14 +622,14 @@ export function loadAudit(query: AuditQuery = {}, opts: Signal = {}): Promise<Au
 /**
  * Verify the hash chain.
  *
- * `GET /v1/audit/verify` — **admin-api/src/server.ts:579**.
+ * `GET /v1/audit/verify` — **admin-api/src/server.ts**.
  *
  * **`from=0` re-walks the whole chain rather than resuming from the last checkpoint** — that is
  * the thing an operator investigating a suspected tamper needs, and the reason it is a parameter
- * rather than the default is cost (server.ts:582-584). This console offers both, labelled by what
+ * rather than the default is cost (server.ts). This console offers both, labelled by what
  * they mean rather than by the parameter they set.
  *
- * The route answers **200 either way** (server.ts:591-592): the caller asked whether the chain
+ * The route answers **200 either way** (server.ts): the caller asked whether the chain
  * verifies and this is the answer, and a 500 would deny a monitoring system the fact it exists to
  * read. So `ok: false` is a successful request reporting a failed chain, and this client must
  * never render it as a failed request.
@@ -637,15 +647,15 @@ export function verifyChain(
   })
 }
 
-/** `GET /v1/flags` — **admin-api/src/server.ts:774**. */
+/** `GET /v1/flags` — **admin-api/src/server.ts**. */
 export function loadFlags(opts: Signal = {}): Promise<{ flags: readonly FeatureFlag[] }> {
   return api<{ flags: readonly FeatureFlag[] }>('/v1/flags', withSignal(opts))
 }
 
 /**
- * `GET /v1/broadcasts` — **admin-api/src/server.ts:811**.
+ * `GET /v1/broadcasts` — **admin-api/src/server.ts**.
  *
- * `live=true` (read at server.ts:814) narrows to those started, not ended and not retracted at
+ * `live=true` (read at server.ts) narrows to those started, not ended and not retracted at
  * the service's own clock — which is the right clock, because the browser's may be wrong.
  */
 export function loadBroadcasts(
@@ -666,20 +676,20 @@ export function loadBroadcasts(
 /**
  * Raise an approval request.
  *
- * `POST /v1/approvals` — **admin-api/src/server.ts:645**.
+ * `POST /v1/approvals` — **admin-api/src/server.ts**.
  *
  * Required by the service, in the order it checks them:
- *   * `action` must be in the catalogue (server.ts:651-655) — anything else is a 400 naming the
+ *   * `action` must be in the catalogue (server.ts) — anything else is a 400 naming the
  *     legal set.
- *   * **an action whose `route` is null is refused with 501** (server.ts:660-662), which is the
+ *   * **an action whose `route` is null is refused with 501** (server.ts), which is the
  *     §3.3g decision. This console does not reach that branch: `catalogue.ts` renders such an
  *     action as unavailable and offers no control that would send this request. The 501 is still
  *     handled, because a catalogue fetched a minute ago is a claim about the past.
- *   * `subjectId`, `reasonCode` and `reason` are required non-empty strings (server.ts:664, 689,
- *     690, via `requireString` at server.ts:1092).
+ *   * `subjectId`, `reasonCode` and `reason` are required non-empty strings (server.ts, 689,
+ *     690, via `requireString` at server.ts).
  *   * every name in the action's `requiredParams` must be a string or a boolean
- *     (server.ts:669-673).
- *   * an `Idempotency-Key` header of 8 to 200 characters, or 400 (server.ts:988-998).
+ *     (server.ts).
+ *   * an `Idempotency-Key` header of 8 to 200 characters, or 400 (server.ts).
  *
  * The idempotency key is passed IN rather than minted here, for the reason `mutation.ts` sets
  * out: a key generated inside a click handler makes every retry a fresh operation, which is the
@@ -693,7 +703,7 @@ export interface ApprovalRequestInput {
   /**
    * ── WHY A LIST IS ALLOWED HERE, WHEN THE SERVICE CHECKS FOR `string | boolean` ───────────────
    *
-   * That check is on `spec.requiredParams` ONLY (server.ts:925-929): a required parameter must be a
+   * That check is on `spec.requiredParams` ONLY (server.ts): a required parameter must be a
    * string or a boolean, and everything else in `params` is stored as the JSON it is.
    * `estate.restore` requires `confirmation` — a string — and its executor reads an OPTIONAL
    * `targets` array (`admin-api/src/approvals.ts`, `Array.isArray(rawTargets)`), where an absent
@@ -726,14 +736,14 @@ export function requestApproval(
 /**
  * Approve or reject a request — and, on an approval, run it.
  *
- * `POST /v1/approvals/:id/decision` — **admin-api/src/server.ts:709**.
+ * `POST /v1/approvals/:id/decision` — **admin-api/src/server.ts**.
  *
- * `grant` must be a boolean or the service answers 400 (server.ts:715). `note` is optional and
- * read at server.ts:731. An `Idempotency-Key` is required (server.ts:718).
+ * `grant` must be a boolean or the service answers 400 (server.ts). `note` is optional and
+ * read at server.ts. An `Idempotency-Key` is required (server.ts).
  *
  * ── What comes back, and why `execution` is on the response at all ────────────────────────────
  *
- * A grant DECIDES and then EXECUTES, in two transactions, deliberately (server.ts:753-767): an
+ * A grant DECIDES and then EXECUTES, in two transactions, deliberately (server.ts): an
  * HTTP request is not transactional, and holding a database transaction open across one is how a
  * slow peer exhausts a connection pool. So a failed execution leaves an APPROVED, UNEXECUTED row
  * — the honest state, and the one an operator can act on — and the route answers 502 or 503
@@ -741,11 +751,11 @@ export function requestApproval(
  * "nothing happened": the second reading is what makes a third operator authorise it again.
  *
  * A rejection, and a replay of a decision already made, answer with `execution: null`
- * (server.ts:749-751).
+ * (server.ts).
  *
  * ── The four-eyes refusal has its own code ────────────────────────────────────────────────────
  *
- * `self_approval_refused` with status 403 (server.ts:356-361), separate from a generic forbidden,
+ * `self_approval_refused` with status 403 (server.ts), separate from a generic forbidden,
  * so a console can say "you raised this one" rather than "forbidden". `gate.ts` uses it.
  */
 export interface DecisionResult {
@@ -773,16 +783,16 @@ export function decideApproval(
 /**
  * Create or change a feature flag.
  *
- * `PUT /v1/flags/:key` — **admin-api/src/server.ts:780**. `enabled` must be a boolean
- * (server.ts:785); `description` and `owner` are required non-empty strings (server.ts:793-794).
+ * `PUT /v1/flags/:key` — **admin-api/src/server.ts**. `enabled` must be a boolean
+ * (server.ts); `description` and `owner` are required non-empty strings (server.ts).
  *
  * **No `Idempotency-Key`, deliberately.** This route is exempt in
- * `admin-api/src/routeidempotency.test.ts:35-37` with the reason recorded there: it is an upsert
+ * `admin-api/src/routeidempotency.test.ts` with the reason recorded there: it is an upsert
  * keyed on the flag key, a retry writes the same row, and the audit records the value BEFORE and
  * AFTER — so a replayed no-op is visible as one rather than as a second change. Sending a key
  * would be harmless and would also be a claim about the route that is not true.
  *
- * `changed` in the response says whether the value actually moved (server.ts:806).
+ * `changed` in the response says whether the value actually moved (server.ts).
  */
 export function setFlag(
   key: string,
@@ -799,10 +809,10 @@ export function setFlag(
 /**
  * Publish a broadcast.
  *
- * `POST /v1/broadcasts` — **admin-api/src/server.ts:827**. `severity`, `title` and `body` are
- * required non-empty strings (server.ts:842-844); `startsAt` and `endsAt` are optional ISO 8601
- * timestamps and a malformed one is a 400 (server.ts:845-846, via `parseDate` at server.ts:1072).
- * An `Idempotency-Key` is required (server.ts:832) — a retry must not publish a second notice.
+ * `POST /v1/broadcasts` — **admin-api/src/server.ts**. `severity`, `title` and `body` are
+ * required non-empty strings (server.ts); `startsAt` and `endsAt` are optional ISO 8601
+ * timestamps and a malformed one is a 400 (server.ts, via `parseDate` at server.ts).
+ * An `Idempotency-Key` is required (server.ts) — a retry must not publish a second notice.
  */
 export interface BroadcastInput {
   readonly severity: Severity
@@ -834,12 +844,12 @@ export function publishBroadcast(
 /**
  * Retract a broadcast.
  *
- * `DELETE /v1/broadcasts/:id` — **admin-api/src/server.ts:864**.
+ * `DELETE /v1/broadcasts/:id` — **admin-api/src/server.ts**.
  *
  * **No `Idempotency-Key`, deliberately**, and for a different reason from the flag route: this is
  * a state transition claimed with `where retracted_at is null`, so a second attempt matches no
  * row and is refused rather than audited twice
- * (`admin-api/src/routeidempotency.test.ts:37-38`).
+ * (`admin-api/src/routeidempotency.test.ts`).
  */
 export function retractBroadcast(id: string, opts: Signal = {}): Promise<{ broadcast: Broadcast }> {
   return api<{ broadcast: Broadcast }>(`/v1/broadcasts/${encodeURIComponent(id)}`, {
@@ -916,8 +926,8 @@ export interface EngagementReport {
 }
 
 /**
- * The caps and the ceilings. `GET /v1/engagement/policies` — **admin-api/src/server.ts:956**.
- * `requireReader` (server.ts:481), so an operator's own token is enough.
+ * The caps and the ceilings. `GET /v1/engagement/policies` — **admin-api/src/server.ts**.
+ * `requireReader` (server.ts), so an operator's own token is enough.
  */
 export function loadEngagementPolicies(opts: Signal = {}): Promise<EngagementPolicies> {
   return api<EngagementPolicies>('/v1/engagement/policies', withSignal(opts))
@@ -925,7 +935,7 @@ export function loadEngagementPolicies(opts: Signal = {}): Promise<EngagementPol
 
 /**
  * Balances and spend, read off the ledger. `GET /v1/engagement/report` —
- * **admin-api/src/server.ts:1046**. This is 21 §6's third action, whose approval column reads
+ * **admin-api/src/server.ts**. This is 21 §6's third action, whose approval column reads
  * "none (read)": the approval queue REFUSES `engagement.report` and names this route, so the
  * console calls it directly rather than spending two operators' signatures on a read.
  */
@@ -934,10 +944,10 @@ export function loadEngagementReport(opts: Signal = {}): Promise<EngagementRepor
 }
 
 /**
- * **LOWER** a cap. `PUT /v1/engagement/policies/:service` — **admin-api/src/server.ts:984**.
+ * **LOWER** a cap. `PUT /v1/engagement/policies/:service` — **admin-api/src/server.ts**.
  *
  * One operator, deliberately, and only downwards: `micro-devplatform`'s quota asymmetry
- * (`devplatform/src/server.ts:981`, "the direction is the authority"). Lowering narrows the blast
+ * (`devplatform/src/server.ts`, "the direction is the authority"). Lowering narrows the blast
  * radius and is the operator doing the platform's work for it; RAISING is the abuse, and this
  * route answers **403 `raise_needs_approval`** for one — the caller must go through
  * `engagement.policy.set` in the approval queue instead, which needs two operators. The
@@ -970,7 +980,7 @@ export function lowerEngagementPolicy(
 /**
  * The backup runs, the settings they were taken under, and what the destination protects against.
  *
- * `GET /v1/backups?limit=` — **admin-api/src/server.ts:1332**.
+ * `GET /v1/backups?limit=` — **admin-api/src/server.ts**.
  *
  * Three things in one response rather than three calls, and the console leans on that: an operator
  * reading a list of green rows and a list of what those rows do NOT protect against must be
@@ -989,7 +999,7 @@ export function loadBackups(
 /**
  * One backup run, its files, and every restore ever attempted from it.
  *
- * `GET /v1/backups/:id` — **admin-api/src/server.ts:1445**.
+ * `GET /v1/backups/:id` — **admin-api/src/server.ts**.
  *
  * The `restores` half is what makes `verifiedAt` legible rather than magic: an operator can see
  * which run proved this backup, in which mode, and whether its checksums matched.
@@ -1001,12 +1011,12 @@ export function loadBackup(id: string, opts: Signal = {}): Promise<BackupDetail>
 /**
  * Take a backup now.
  *
- * `POST /v1/backups` — **admin-api/src/server.ts:1473**. An `Idempotency-Key` is required
- * (server.ts:1479).
+ * `POST /v1/backups` — **admin-api/src/server.ts**. An `Idempotency-Key` is required
+ * (server.ts).
  *
  * The body was the one thing the agreed contract did not specify, and the two fields sent here —
  * read off `BackupRun`'s own declared fields at the time — are the two the service reads:
- * `kind` (server.ts:1479, optional and defaulting to `full`) and `reason` (server.ts:1490). The
+ * `kind` (server.ts, optional and defaulting to `full`) and `reason` (server.ts). The
  * kind is offered as a choice rather than defaulted, because the type has four values and an
  * operator taking a backup before a migration means a different one from an operator rehearsing.
  *
@@ -1030,7 +1040,7 @@ export function startBackup(
 /**
  * The settings, and the bounds the service enforces on them.
  *
- * `GET /v1/backups/settings` — **admin-api/src/server.ts:1359**.
+ * `GET /v1/backups/settings` — **admin-api/src/server.ts**.
  *
  * Called separately from `loadBackups` even though that route also returns `settings`, because the
  * CEILINGS are only here — and a settings form that showed the values without the bounds would let
@@ -1048,17 +1058,17 @@ export function loadBackupSettings(
 /**
  * Change the settings.
  *
- * `PUT /v1/backups/settings` — **admin-api/src/server.ts:1387**.
+ * `PUT /v1/backups/settings` — **admin-api/src/server.ts**.
  *
  * **No `Idempotency-Key`, and the service agrees**: it wraps neither this route nor the reads,
  * only the two POSTs. That matches the shape of the route — a partial update of a single settings
  * row, where a retry writes the same values and the audit records `admin.backup.settings.changed`
- * either way (server.ts:1427) — and it matches how this console already treats
+ * either way (server.ts) — and it matches how this console already treats
  * `PUT /v1/flags/:key`.
  *
  * ── Only the four fields the form edits are sent, and the route is happy with that ────────────
  *
- * `admin-api` builds its change set from whichever fields are PRESENT (server.ts:1393-1414) and
+ * `admin-api` builds its change set from whichever fields are PRESENT (server.ts) and
  * answers 400 only when none is. So omitting `ceilingBytes`, `minFreeBytes` and the verification
  * schedule leaves them untouched rather than clearing them — which is what makes it safe not to
  * echo them back. Echoing them WOULD be unsafe: a form opened before a bound was tightened would
@@ -1088,7 +1098,7 @@ export function saveBackupSettings(
   })
 }
 
-/** Every restore ever attempted, newest first. `GET /v1/restores` — **server.ts:1520**. */
+/** Every restore ever attempted, newest first. `GET /v1/restores` — **server.ts**. */
 export function loadRestores(
   query: { limit?: number } = {},
   opts: Signal = {},
@@ -1102,14 +1112,14 @@ export function loadRestores(
 /**
  * Restore into a throwaway scratch database, prove the artefacts read back, and drop it.
  *
- * `POST /v1/restores` — **admin-api/src/server.ts:1546**. An `Idempotency-Key` is required
- * (server.ts:1568).
+ * `POST /v1/restores` — **admin-api/src/server.ts**. An `Idempotency-Key` is required
+ * (server.ts).
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **THERE IS NO `startLiveRestore`, AND THE ABSENCE IS THE SHAPE OF THE SERVICE.**
  *
  * The contract these screens were first written to had one route and two modes. The service that
- * landed **refuses `mode: "live"` at this route outright** (server.ts:1552-1558), answering 400
+ * landed **refuses `mode: "live"` at this route outright** (server.ts), answering 400
  * with the route to use instead — exactly as a read action is refused by `POST /v1/approvals` with
  * the GET to call. The only door to a live restore is the approval queue: `estate.restore`, two
  * operators, and `approvals.ts`'s executor creates the restore row itself with the approval id on
@@ -1122,7 +1132,7 @@ export function loadRestores(
  *
  * ── Why the asymmetry is load-bearing rather than lenient ─────────────────────────────────────
  *
- * The service's own comment (server.ts:1533-1545): a verify touches nothing live, "so it needs one
+ * The service's own comment (server.ts): a verify touches nothing live, "so it needs one
  * operator and no ceremony — and that asymmetry is load-bearing rather than lenient … if the only
  * available restore were the terrifying one, no restore would ever be rehearsed and every backup
  * would stay a wish." This console follows it: the safe restore is one explained click.
@@ -1130,7 +1140,7 @@ export function loadRestores(
  */
 export interface VerifyRestoreInput {
   readonly backupRunId: string
-  /** Artefact names. An empty list is the service's "everything" (server.ts:1564). */
+  /** Artefact names. An empty list is the service's "everything" (server.ts). */
   readonly targets: readonly string[]
   readonly reason: string
 }

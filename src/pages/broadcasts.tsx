@@ -1,15 +1,15 @@
 /**
  * Broadcasts — the estate-wide notice an operator writes during an incident.
  *
- * `GET /v1/broadcasts` — **admin-api/src/server.ts:811**, `live` read at server.ts:814.
- * `POST /v1/broadcasts` — **admin-api/src/server.ts:827**, `Idempotency-Key` required at
- * server.ts:832 — a retry must not publish a second notice.
- * `DELETE /v1/broadcasts/:id` — **admin-api/src/server.ts:864**.
+ * `GET /v1/broadcasts` — **admin-api/src/server.ts**, `live` read at server.ts.
+ * `POST /v1/broadcasts` — **admin-api/src/server.ts**, `Idempotency-Key` required at
+ * server.ts — a retry must not publish a second notice.
+ * `DELETE /v1/broadcasts/:id` — **admin-api/src/server.ts**.
  *
  * **No `Idempotency-Key` on the retraction, deliberately**, and for a different reason from the
  * flag route: it is a state transition claimed with `where retracted_at is null`, so a second
  * attempt matches no row and is refused rather than audited twice
- * (`admin-api/src/routeidempotency.test.ts:37-38`).
+ * (`admin-api/src/routeidempotency.test.ts`).
  *
  * ── This is the screen 13:358 points at ───────────────────────────────────────────────────────
  *

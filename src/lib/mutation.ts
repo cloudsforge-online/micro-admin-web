@@ -21,12 +21,12 @@
  * ── WHAT THE SECOND REQUEST COSTS ON AN OPERATOR CONSOLE ──────────────────────────────────────
  *
  * Not a duplicate artefact, on the three routes that carry an `Idempotency-Key`: admin-api's
- * `withIdempotency` (`admin-api/src/idempotency.ts:9-17`) makes a concurrent duplicate BLOCK on
+ * `withIdempotency` (`admin-api/src/idempotency.ts`) makes a concurrent duplicate BLOCK on
  * the first transaction's uncommitted row and then replay its stored response. That half is
  * already right and this hook must not break it.
  *
  * What it costs is a LIE ABOUT THE OUTCOME on the routes that carry no key, and the sharpest is
- * `DELETE /v1/broadcasts/:id`. The service's own comment (`admin-api/src/broadcasts.ts:178-180`)
+ * `DELETE /v1/broadcasts/:id`. The service's own comment (`admin-api/src/broadcasts.ts`)
  * says a second retraction "is not an error the operator needs to see as a failure — the
  * broadcast is retracted either way" — and then throws `broadcast <id> is already retracted`,
  * because it must not write a second audit row. A same-tick double click therefore lands one
@@ -58,7 +58,7 @@ export function useMutation<A extends unknown[], T>(
 ): Mutation<A, T> {
   // Not `useState`: the whole point is a value written and read in the same tick.
   //
-  // Under `<StrictMode>` (src/main.tsx:29) React double-invokes the component function on mount,
+  // Under `<StrictMode>` (src/main.tsx) React double-invokes the component function on mount,
   // so this initialiser runs twice and one of the two refs is discarded. That is harmless — both
   // start `false`, and from the first commit onwards there is exactly one ref, which is the one
   // both clicks of a double click read. `test/double-submit.test.ts` proves every scenario in
@@ -105,7 +105,7 @@ export function useMutation<A extends unknown[], T>(
 /*
  * `deployKeyFor` used to live here. It was dead code and it was evidence: this console talks to
  * admin-api, has no markets and never deployed a contract, yet the function and its doc block
- * cited `foresight/src/server.ts:832-838` — because this whole file was copied from
+ * cited `foresight/src/server.ts` — because this whole file was copied from
  * micro-foresight-admin-web, false comment and all. The key minting this app really does is
  * `idempotencyKeyFor` in `lib/gate.ts`, which is per page view rather than per click.
  */

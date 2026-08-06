@@ -15,7 +15,7 @@
  * The reason to derive rather than to decide, four times over, is that a console hidden by four
  * independent opinions is a console that becomes visible when one of them is edited by somebody
  * who did not know about the other three. Hiding is NOT the security boundary — `admin-api`
- * verifies the `admin` role on every request (`requireOperator`, admin-api/src/server.ts:496) —
+ * verifies the `admin` role on every request (`requireOperator`, admin-api/src/server.ts) —
  * but publishing an operator console's address, name and purpose to anyone who searches is
  * reconnaissance handed over for free, and there is no argument at all for the alternative.
  *

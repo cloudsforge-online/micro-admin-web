@@ -4,7 +4,7 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **A DEGRADED UPSTREAM MARKS ONE TILE. IT DOES NOT BLANK THE CONSOLE.**
  *
- * `GET /v1/estate` always answers 200, even with an upstream dead (admin-api/src/server.ts:895-897,
+ * `GET /v1/estate` always answers 200, even with an upstream dead (admin-api/src/server.ts,
  * with the reasoning in the header of `estate.ts`): the operator console is read DURING an
  * incident, which is precisely when something is down, and a console that 500s when one service
  * is unwell is unavailable exactly when it exists to be used. `hub-api` proves the same rule with
@@ -20,7 +20,7 @@
  * with a label on it. Each tile carries its own `upstream` and `reason` from the service, and
  * this console renders those verbatim rather than "unavailable" — "ledger could not be reached"
  * and "ledger answered 503" are different problems with different next moves, and `estate.ts`
- * distinguishes them (`reasonFor`, estate.ts:87-94).
+ * distinguishes them (`reasonFor`, estate.ts).
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
  * ── Where a NUMBER is absent ─────────────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ export function unreadyServices(view: EstateView): readonly ServiceHealth[] {
  * 17 §8: a non-zero trial balance is a P0 and everything downstream of the ledger is
  * untrustworthy until it is zero. `admin-api` marks the tile DEGRADED rather than `ok` for it,
  * because the ledger answered correctly and what it said is that something is wrong
- * (estate.ts:159-168). An unknown balance is not a P0 — it is an unknown, and this returns false
+ * (estate.ts). An unknown balance is not a P0 — it is an unknown, and this returns false
  * for it rather than raising an alarm the data does not support.
  */
 export function trialBalanceIsP0(view: EstateView): boolean {

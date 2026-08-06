@@ -226,7 +226,8 @@ describe('auth callback', () => {
     //
     // It read `/auth/exchange`, which `micro-identity` has never served. Identity mints a hand-off
     // code with `POST /auth/handoff` and spends one with `POST /auth/handoff/redeem`
-    // (identity/src/server.ts:1076 and :1084, the latter also in the throttle table at :410) —
+    // (`POST /auth/handoff` and `POST /auth/handoff/redeem`, both in identity/src/server.ts,
+    // the second also in its throttle table) —
     // both re-read in the source rather than taken from this comment's predecessor.
     //
     // This is the defect class docs/ecosystem/14 §11 names: the client was written to post to

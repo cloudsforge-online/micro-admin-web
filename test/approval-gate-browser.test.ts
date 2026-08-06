@@ -10,8 +10,8 @@
  * this repository's own comments say is not a mechanism.
  *
  * And what is at stake here is not layout. `admin-api` does not roll a failed execution back
- * (server.ts:753-767) and `decide()` refuses any transition out of a decided state
- * (approvals.ts:258-260), so an approval is a thing that happens once. The controls in front of it
+ * (server.ts) and `decide()` refuses any transition out of a decided state
+ * (approvals.ts), so an approval is a thing that happens once. The controls in front of it
  * are deliberately slow, and every one of them is a thing that could be silently loosened by an
  * edit somewhere else:
  *

@@ -22,7 +22,7 @@
  * **An empty result must never read as an answer.**
  *
  * Nothing in the estate published `*.audit.recorded` when this screen was built — the topic
- * `admin-api` consumes has no producer, and `admin-api/README.md:367-368` records the same
+ * `admin-api` consumes has no producer, and `admin-api/README.md` records the same
  * finding. So the log this screen reads holds `admin-api`'s own rows and no others, and an empty
  * timeline means *the mirror is missing* far more often than *the user did nothing*.
  *
@@ -597,7 +597,7 @@ describe('the catalogue and this file agree', () => {
    *
    * The guards below grep for shapes a scenario must not have, and every such pattern necessarily
    * appears in the guard that forbids it. Scanning the whole file makes each of them fail on a
-   * correct file — the trap `test/render.test.ts:26-34` already records: "a guard that fires on
+   * correct file — the trap `test/render.test.ts` already records: "a guard that fires on
    * its own explanation trains people to delete the explanation."
    */
   const MARKER = "describe('the catalogue and this file agree'"

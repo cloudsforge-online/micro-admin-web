@@ -160,7 +160,7 @@ const estate = (over: Partial<EstateIdentity> = {}): EstateIdentity => ({
   ...over,
 })
 
-/** `CEILINGS`, admin-api/src/backups.ts:179 — a {min,max} per settable field. */
+/** `CEILINGS`, admin-api/src/backups.ts — a {min,max} per settable field. */
 const ceilings = (over: Partial<BackupCeilings> = {}): BackupCeilings => ({
   retentionCopies: { min: 1, max: 365 },
   ceilingBytes: { min: '1073741824', max: '1099511627776' },
@@ -313,7 +313,7 @@ describe('restoreGate — every refusal, in both directions', () => {
   })
 
   it('refuses a live restore with no reason code, and marks it as the operator’s to fix', () => {
-    // `POST /v1/approvals` validates it against a closed list (approvals.ts:53-61) and answers 400
+    // `POST /v1/approvals` validates it against a closed list (approvals.ts) and answers 400
     // for anything else, so an empty box is a refusal the console can state rather than a 400 the
     // operator has to interpret.
     for (const code of ['', '   ']) {
@@ -366,7 +366,7 @@ describe('estateEnvironment — READ from the service, not derived from the rows
   })
 
   it('renders an unclaimed identity as the absence it is, not as a default', () => {
-    // `requestRestore` refuses EVERY restore when this row is missing (admin-api/src/backups.ts:614)
+    // `requestRestore` refuses EVERY restore when this row is missing (admin-api/src/backups.ts)
     // rather than guessing, so an operator should read that here and not discover it at the end of
     // the ritual.
     const answer = estateEnvironment(estate({ environment: null }), [backup()])
@@ -662,7 +662,7 @@ const detailRoutes = (over: {
         backup: one,
         artefacts: over.artefacts ?? [artefact()],
         restores: over.restores ?? [],
-        // The service builds this with `expectedConfirmation` (admin-api/src/backups.ts:561) and
+        // The service builds this with `expectedConfirmation` (admin-api/src/backups.ts) and
         // compares it with `!==` at execution. The scenarios read it off the PAGE and compare it
         // with what was sent, so a console rendering its own spelling of the timestamp fails.
         liveConfirmationPhrase:
@@ -1182,7 +1182,7 @@ describe('the verify restore', () => {
  * admin-api's wrapper collapses them, which is exactly why the client must not lean on it: the
  * half that is already right is not a licence to send the second request.
  *
- * Both modes run under `<StrictMode>` as well as plain, because `src/main.tsx:29` renders under it
+ * Both modes run under `<StrictMode>` as well as plain, because `src/main.tsx` renders under it
  * and a ref latch is created twice on a StrictMode mount — a guard proven only in the plain mode
  * has never been run the way the app runs it.
  */

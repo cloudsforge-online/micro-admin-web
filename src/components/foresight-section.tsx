@@ -12,7 +12,7 @@
  * one service's.
  *
  * So the section keeps its own three, one level down, and the top bar gains exactly one entry.
- * `19-new-products.md:142` called this a fold rather than a merge for the same reason — the panel
+ * `19-new-products.md` called this a fold rather than a merge for the same reason — the panel
  * was always one panel, and it stays one.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
@@ -22,7 +22,7 @@
  * route gate is `ProtectedRoute` in app.tsx, which only distinguishes signed-in from signed-out,
  * and the thing that actually refuses is `micro-foresight` — every operator route calls
  * `requireAdmin(await authenticate(ctx, deps))` before it reads a parameter
- * (foresight/src/server.ts:649, 660, 681, 704, 714, 732, 772, 859, 899, 927, 957, 976), and
+ * (foresight/src/server.ts, 660, 681, 704, 714, 732, 772, 859, 899, 927, 957, 976), and
  * `requireAdmin` refuses a token without the role wherever it came from.
  *
  * That ordering matters more here than on the estate screens, because two of these links lead to

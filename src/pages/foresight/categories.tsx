@@ -5,7 +5,7 @@
  * a versioned allowlist, and a rule an operator cannot find at the moment they need it is a rule
  * they apply from memory — which for the three refusals is exactly the wrong way round, since the
  * space of terrible questions is larger than any list and the person writing the next one has
- * read the list (foresight/src/categories.ts:1-25).
+ * read the list (foresight/src/categories.ts).
  *
  * The allowlist is served from `GET /categories`, which is public and unauthenticated on purpose:
  * "a refusal list behind a token is a refusal list nobody can hold the platform to."

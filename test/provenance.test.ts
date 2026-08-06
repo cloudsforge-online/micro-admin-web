@@ -89,7 +89,7 @@ describe('a model proposal cannot be approved unread', () => {
 describe('a model proposal with no sources cannot be approved at all', () => {
   it('refuses permanently, and says to discard it instead', () => {
     // The stronger of the two rules. `ideas_model_has_provenance` means a model-origin row cannot
-    // be stored without provenance (ideas.ts:22), so a sourceless one arriving here means
+    // be stored without provenance (ideas.ts), so a sourceless one arriving here means
     // something upstream is wrong — and approving it would be authoring resolution criteria from
     // nothing at all.
     const gate = approvalGate({ idea: idea({ sources: [] }), sourcesReviewed: true })

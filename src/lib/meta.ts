@@ -7,11 +7,11 @@
  * Two facts about this surface the shared function cannot know, and one it can:
  *
  *   1. **The robots string is longer here.** `robotsDirective()` derives `noindex, nofollow` from
- *      `adminOnly` (@cloudsforge/ui/seo.ts:139-140, and `admin`'s row at surfaces.ts:340) — which
+ *      `adminOnly` (@cloudsforge/ui/seo.ts, and `admin`'s row at surfaces.ts) — which
  *      is right and is not the whole of what this console refuses. `index.html` has carried
  *      `noarchive, noimageindex` as well since it shipped, because a console that is merely
  *      unindexed can still be cached and have its screenshots served. That is a per-surface
- *      addition and `PageMetaInput.robots` is the documented way to make one (seo.ts:101-106).
+ *      addition and `PageMetaInput.robots` is the documented way to make one (seo.ts).
  *
  *      IT MATTERS THAT IT IS SPELLED ONCE. `applyHead()` REWRITES the `<meta name="robots">` tag
  *      in the served document on every navigation. Without the override it would rewrite the four

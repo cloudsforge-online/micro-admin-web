@@ -1,10 +1,10 @@
 /**
  * The action catalogue, and the one action that cannot be executed.
  *
- * `GET /v1/actions` — **admin-api/src/server.ts:609**. It returns every catalogue entry INCLUDING
+ * `GET /v1/actions` — **admin-api/src/server.ts**. It returns every catalogue entry INCLUDING
  * the blocked one and its reason, precisely so a console can render the 501 before the operator
- * hits it (server.ts:612-613), plus the closed reason-code list (approvals.ts:53-61).
- * `POST /v1/approvals` — **admin-api/src/server.ts:645**.
+ * hits it (server.ts), plus the closed reason-code list (approvals.ts).
+ * `POST /v1/approvals` — **admin-api/src/server.ts**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * §3.3g IS THE HEADLINE ON THIS SCREEN, AND IT IS RENDERED AS A GAP RATHER THAN AS A BUTTON.

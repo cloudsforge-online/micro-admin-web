@@ -253,7 +253,7 @@ describe('the four names treated as development', () => {
  * If the Foresight screens resolved their base the same way, a future edit that made this bundle's
  * origin look like foresight's — or a `resolveApiBase` that returned '' for any reason — would
  * send `GET /markets` to `admin.<apex>/markets`. The gateway's `cf-api-admin` claims only `/v1` on
- * that host (deploy/gateway/dynamic/estate-web.yml:496), so the request would fall through to
+ * that host (deploy/gateway/dynamic/estate-web.yml), so the request would fall through to
  * `cf-web-admin` and be answered by the app shell: a 200, carrying HTML, where JSON was expected.
  * That failure is silent in the network tab and shows up as a JSON parse error naming the wrong
  * thing — the exact shape `deploy/scripts/surface-routes.py` check 3 exists to prevent at the

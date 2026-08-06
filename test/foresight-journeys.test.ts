@@ -52,7 +52,7 @@ const IDEA_ID = '9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a'
 
 const SIGNED_IN = { 'cf.accessToken': 'a1', 'cf.refreshToken': 'r1' }
 
-/** `/auth/me`, in the NESTED shape identity really sends (identity/src/server.ts:891-903). */
+/** `/auth/me`, in the NESTED shape identity really sends (identity/src/server.ts). */
 const me = {
   status: 200,
   body: { user: { id: 'operator-uuid', handle: 'sam', roles: ['admin'] } },

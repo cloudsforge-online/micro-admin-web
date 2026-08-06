@@ -185,11 +185,11 @@ body {
  * `--cf-accent-text`, AND NOT `--cf-accent`, EVERYWHERE A COLOUR MEETS TYPE IN THIS FILE.
  *
  * This console's accent is clay, `#c2704f`, and it MEASURES 3.82:1 on the tightest ground this
- * system composes text on (@cloudsforge/ui/tokens.css:924). The AA floor for body text is 4.5:1.
+ * system composes text on (@cloudsforge/ui/tokens.css). The AA floor for body text is 4.5:1.
  * `--cf-accent` is validated at 3:1 — the NON-TEXT floor, which is the right one for the borders
  * and the fills it is used for below and the wrong one for `color:`. The design system shipped a
  * derived step for exactly this, `--cf-accent-text`, at `#d57b57` and 4.53:1 — the same colour in
- * linear light, walked until it clears — and tokens.css:742 states the rule in one line: "`color:`
+ * linear light, walked until it clears — and tokens.css states the rule in one line: "`color:`
  * is --cf-accent-text".
  *
  * FOUR RULES IN THIS FILE SET `color: var(--cf-accent)` and all four are moved: `.wt-link` (every

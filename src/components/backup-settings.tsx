@@ -1,8 +1,8 @@
 /**
  * The backup settings, and the bounds the service enforces on them.
  *
- * `GET /v1/backups/settings` — **admin-api/src/server.ts:1359**.
- * `PUT /v1/backups/settings` — **admin-api/src/server.ts:1387**.
+ * `GET /v1/backups/settings` — **admin-api/src/server.ts**.
+ * `PUT /v1/backups/settings` — **admin-api/src/server.ts**.
  *
  * ── Why the ceilings are rendered rather than reimplemented ───────────────────────────────────
  *

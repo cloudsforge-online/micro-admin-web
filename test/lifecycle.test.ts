@@ -5,7 +5,7 @@
  * WHAT THIS FILE IS FOR.
  *
  *   1. **The mirrored table is really foresight's table.** `src/lib/lifecycle.ts` restates
- *      `foresight/src/markets.ts:49-61`. A mirror that drifts is worse than no mirror: it
+ *      `foresight/src/markets.ts`. A mirror that drifts is worse than no mirror: it
  *      produces a console offering a button the service will refuse, which teaches the operator
  *      that the console lies. Every row is pinned below.
  *   2. **An unapproved proposal can never reach `open`, and resolve is impossible before close.**
@@ -73,14 +73,14 @@ function market(over: Partial<Market> = {}): Market {
 /* ══════════════════════════════ the mirrored table ══════════════════════════════ */
 
 describe('the transition table mirrors foresight', () => {
-  it('is the table at foresight/src/markets.ts:49-61, row for row', () => {
+  it('is the table at foresight/src/markets.ts, row for row', () => {
     assert.deepEqual(TRANSITIONS, {
       draft: ['approved', 'void'],
       approved: ['open', 'void'],
       open: ['closed', 'void'],
       closed: ['resolved', 'void'],
       // Not an oddity: the dispute window doing its job. The outcome is posted, somebody shows it
-      // is wrong, and the money has not moved yet (markets.ts:55-56).
+      // is wrong, and the money has not moved yet (markets.ts).
       resolved: ['settled', 'void'],
       settled: [],
       void: [],
@@ -163,7 +163,7 @@ describe('void is reachable, and distinct from resolve', () => {
 
   it('is refused on a DEPLOYED market, and says the oracle is the way', () => {
     // `POST /markets/:id/void` answers 409 `on_chain` for a market with a contract
-    // (server.ts:780-787). A console that offered the button anyway would produce a 409 the
+    // (server.ts). A console that offered the button anyway would produce a 409 the
     // operator has to interpret; this says the actual answer instead.
     const action = actionById(
       market({ status: 'closed', contractAddress: '0x' + '11'.repeat(20) }),
@@ -207,7 +207,7 @@ describe('void is reachable, and distinct from resolve', () => {
 
 describe('outcome encoding', () => {
   it('0 is YES and 1 is NO — the one thing that pays the wrong half if it is inverted', () => {
-    // resolve.ts:226 maps outcome 0 to ACTION_RESOLVE_YES; mirror.ts:281-282 sums `outcome = 0`
+    // resolve.ts maps outcome 0 to ACTION_RESOLVE_YES; mirror.ts sums `outcome = 0`
     // into the `yes` pool. It reads backwards to anybody expecting 0 to be false.
     assert.equal(OUTCOME_YES, 0)
     assert.equal(OUTCOME_NO, 1)
@@ -234,7 +234,7 @@ describe('outcome encoding', () => {
 
   it('detects the overrule: a requested outcome that came back as a void', () => {
     // `planResolution` turns a resolve into a void when the named source is unreachable
-    // (resolve.ts:225-231). The operator must be told, not left assuming their choice stood.
+    // (resolve.ts). The operator must be told, not left assuming their choice stood.
     assert.equal(planWasOverruled(0, ACTION_VOID), true)
     assert.equal(planWasOverruled(1, ACTION_VOID), true)
     assert.equal(planWasOverruled(0, ACTION_RESOLVE_YES), false)

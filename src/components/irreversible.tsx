@@ -7,9 +7,9 @@
  * Everything else in an operator console should get out of the way. These must not. Approving a
  * request runs a ledger reversal, a marketplace case resolution or an entitlement revocation
  * against a real upstream, and `admin-api` does not roll it back if the execution fails
- * (server.ts:753-767) — the approval stands and the failure is recorded, which is the honest
+ * (server.ts) — the approval stands and the failure is recorded, which is the honest
  * state and is not an undo. Rejecting a request is terminal: `decide()` refuses any transition
- * out of a decided state (approvals.ts:258-260).
+ * out of a decided state (approvals.ts).
  *
  * So the shape is: the consequences in SENTENCES first, then the audit rows the action will
  * write, then the facts the decision turns on, then a rationale, then a phrase the operator

@@ -190,7 +190,7 @@ export interface Tone {
   readonly word: string
 }
 
-/** `admin-api/src/estate.ts:35` — the three tile statuses, and what each one means to a reader. */
+/** `admin-api/src/estate.ts` — the three tile statuses, and what each one means to a reader. */
 export function tileTone(status: TileStatus): Tone {
   if (status === 'ok') return { tone: 'good', glyph: '●', word: 'OK' }
   // Degraded is not "slightly unavailable". `estate.ts` marks the services tile degraded when it
@@ -200,7 +200,7 @@ export function tileTone(status: TileStatus): Tone {
   return { tone: 'crit', glyph: '■', word: 'UNAVAILABLE' }
 }
 
-/** `admin-api/src/approvals.ts:42`. */
+/** `admin-api/src/approvals.ts`. */
 export function approvalTone(state: string): Tone {
   if (state === 'pending') return { tone: 'warn', glyph: '◷', word: 'PENDING' }
   if (state === 'approved') return { tone: 'good', glyph: '✓', word: 'APPROVED' }
@@ -217,7 +217,7 @@ export function outcomeTone(outcome: string): Tone {
   return { tone: 'mute', glyph: '?', word: outcome.toUpperCase() }
 }
 
-/** `admin-api/src/broadcasts.ts:27`. */
+/** `admin-api/src/broadcasts.ts`. */
 export function severityTone(severity: string): Tone {
   if (severity === 'incident') return { tone: 'crit', glyph: '■', word: 'INCIDENT' }
   if (severity === 'maintenance') return { tone: 'warn', glyph: '▲', word: 'MAINTENANCE' }
@@ -230,7 +230,7 @@ export function severityTone(severity: string): Tone {
  * Three answers, not two. A chain that verifies and a chain that has NEVER BEEN VERIFIED are
  * different facts: SD-16 verifies continuity nightly and calls a break a P0, so a verification
  * that has never run is a control that is not running — and `estate.ts` marks the tile degraded
- * for exactly that (estate.ts:206-216). Reporting it as "OK" would be reporting the absence of
+ * for exactly that (estate.ts). Reporting it as "OK" would be reporting the absence of
  * evidence as evidence of absence.
  */
 export function chainTone(input: { ok: boolean; breaks: number; everVerified: boolean }): Tone {
@@ -395,7 +395,7 @@ export function shortHash(hash: string | null): string {
  * ── MONEY IS A STRING ALL THE WAY TO THE DOM ─────────────────────────────────────────────────
  *
  * Pool amounts are wei: decimal strings of up to 78 digits, summed in bigint by the mirror and
- * stored in `numeric(78,0)` (foresight/src/mirror.ts:68-74). One EMBER is 1e18 wei, so
+ * stored in `numeric(78,0)` (foresight/src/mirror.ts). One EMBER is 1e18 wei, so
  * `Number('1234567890123456789')` has already lost the bottom four digits before anything is
  * displayed. Every function in this section is a STRING operation or a bigint one. Nothing calls
  * `parseFloat`, `Number()` or `toLocaleString` on an amount.
@@ -466,7 +466,7 @@ export function groupDigits(digits: string): string {
 /**
  * Basis points as a percentage, to one decimal place.
  *
- * `yesBps` is an integer the service computed in bigint before narrowing (mirror.ts:304-307), so
+ * `yesBps` is an integer the service computed in bigint before narrowing (mirror.ts), so
  * this genuinely is integer arithmetic and not a money value passing through a double.
  */
 export function formatBps(bps: number | null | undefined): string | null {
@@ -514,7 +514,7 @@ export function utcStamp(iso: string | null | undefined): string | null {
  *
  * `null` in gives **"never synced"**, not "as of now" and not an empty string. The mirror having
  * never run and the pool being empty produce identical numbers and mean opposite things
- * (mirror.ts:313-315), so the two are never allowed to render the same.
+ * (mirror.ts), so the two are never allowed to render the same.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 export function mirrorAsOf(iso: string | null | undefined): string {

@@ -19,7 +19,7 @@ import { shortId, utcStamp } from '../../lib/format.ts'
 import { useResource } from '../../lib/resource.ts'
 import { foresightPath } from '../../lib/routes.ts'
 
-/** The seven states `parseStatus` accepts (foresight/src/server.ts:846-850), plus "any". */
+/** The seven states `parseStatus` accepts (foresight/src/server.ts), plus "any". */
 const FILTERS: ReadonlyArray<{ value: MarketStatus | 'all'; label: string }> = [
   { value: 'closed', label: 'Needs an outcome' },
   { value: 'open', label: 'Open' },

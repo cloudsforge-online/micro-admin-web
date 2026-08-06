@@ -17,7 +17,7 @@
  * a console where the difference between them is four pixels.
  *
  * The `void` BUTTON only applies to a market with no contract — foresight refuses that route with
- * 409 `on_chain` otherwise (server.ts:780-787). For a deployed market the void path runs through
+ * 409 `on_chain` otherwise (server.ts). For a deployed market the void path runs through
  * the oracle, and the resolve block says so in words rather than leaving the operator to wonder
  * why the obvious button is disabled.
  */
@@ -202,7 +202,7 @@ function MarketProvenancePanel({ provenance }: { provenance: MarketProvenance | 
       <ProvenanceFacts
         rows={provenanceRows({
           // `provenanceRows` reads a proposal, and a market's provenance is the same five fields
-          // under the same names (server.ts:434-443). The fields it does not carry are supplied
+          // under the same names (server.ts). The fields it does not carry are supplied
           // as null so the rows still render "not recorded" rather than disappearing.
           id: '',
           status: 'approved',
@@ -295,8 +295,8 @@ function Outcome({
  * `GET /markets/:id/resolution` returned the `Resolution` row verbatim, `oracleNonce` is a bigint
  * and `JSON.stringify` throws on one — so the route answered 500 from the moment the oracle
  * signed, which is every call an operator would actually make. foresight narrowed it:
- * `resolutionView` (foresight/src/resolve.ts:120-136) renders the nonce as a decimal string and
- * drops the signing path, and server.ts:963 serves that. Its header credits the report to this
+ * `resolutionView` (foresight/src/resolve.ts) renders the nonce as a decimal string and
+ * drops the signing path, and server.ts serves that. Its header credits the report to this
  * console's predecessor — "Found by micro-foresight-admin-web, the first client to call the route".
  *
  * ── What has NOT changed is how a failure is worded ───────────────────────────────────────────

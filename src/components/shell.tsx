@@ -140,7 +140,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         ON THIS SURFACE IT RENDERS NOTHING, EVER, AND IT IS MOUNTED ANYWAY. `index.html` carries no
         `cf-analytics` measurement ID — the reasoning is written out in that file — so `analyticsId()`
         is null and `CookieBanner` returns null before it draws anything
-        (ui/packages/ui/src/index.tsx:1196). Mounting it costs one function call and buys the thing
+        (ui/packages/ui/src/index.tsx). Mounting it costs one function call and buys the thing
         that is actually hard to keep: every shell in the estate has the same three elements in the
         same three places, so a reader comparing two of them is comparing surfaces rather than
         conventions, and a future measurement ID cannot be added here without the banner appearing
@@ -173,7 +173,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
  * `og:image`. `brand/assets/admin/` ships no card and 18-build-status.md §3.3k records that as a
  * decision — nobody shares an operator console outward — and `test/brand-chrome.test.ts` asserts
  * the absence with the same force it asserts a favicon's presence. `applyHead()` writes the
- * estate's DEFAULT card at runtime and offers no way to suppress it (seo.ts:187-199 emits it
+ * estate's DEFAULT card at runtime and offers no way to suppress it (seo.ts emits it
  * unconditionally). That is accepted rather than worked around, for one reason that decides it:
  * the fetchers §3.3k is about — chat, social, link previews — do not execute JavaScript, so they
  * read `index.html` and find no card, which is exactly what was decided. The static absence is

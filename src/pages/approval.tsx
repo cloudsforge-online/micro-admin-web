@@ -1,8 +1,8 @@
 /**
  * One approval request, and the decision on it.
  *
- * `GET /v1/approvals/:id` — **admin-api/src/server.ts:637**.
- * `POST /v1/approvals/:id/decision` — **admin-api/src/server.ts:709**.
+ * `GET /v1/approvals/:id` — **admin-api/src/server.ts**.
+ * `POST /v1/approvals/:id/decision` — **admin-api/src/server.ts**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE THREE THINGS THIS SCREEN HAS TO GET RIGHT.
@@ -13,7 +13,7 @@
  * "not yet" and gets clicked at.
  *
  * **2. An APPROVED, UNEXECUTED request is rendered as what it is.** A grant decides in one
- * transaction and executes in a second, deliberately (server.ts:753-767), and a failed execution
+ * transaction and executes in a second, deliberately (server.ts), and a failed execution
  * is NOT rolled back: the row stands at `approved` with `execution_outcome = 'failed'`, which is
  * the honest state and the one an operator can act on. Rendering that as "nothing happened" is
  * how a third operator comes to authorise something two operators already authorised. So the
@@ -22,7 +22,7 @@
  *
  * **3. The deadline is computed, not read off `state`.** A request past its deadline still reads
  * `pending` until the leased expiry job sweeps it, and `decide()` answers 409 in the gap
- * (approvals.ts:263-265). See `decisionGate`.
+ * (approvals.ts). See `decisionGate`.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import { useCallback, useMemo } from 'react'

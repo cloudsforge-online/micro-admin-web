@@ -1,14 +1,14 @@
 /**
  * The approval queue.
  *
- * `GET /v1/approvals` — **admin-api/src/server.ts:623**, with `state`, `action`, `requestedBy` and
- * `limit` read at server.ts:627-632.
+ * `GET /v1/approvals` — **admin-api/src/server.ts**, with `state`, `action`, `requestedBy` and
+ * `limit` read at server.ts.
  *
  * ── Why the default filter is `pending` ───────────────────────────────────────────────────────
  *
  * A queue is the list of things that need somebody. Opening on "everything" would put four
  * decided rows in front of every one that is waiting, and the whole point of the screen is that a
- * request nobody answers EXPIRES: `expirePending` sweeps them (approvals.ts:404) and the audit
+ * request nobody answers EXPIRES: `expirePending` sweeps them (approvals.ts) and the audit
  * records "no second operator answered before the deadline". A queue that buries its own work is
  * how that happens.
  *
@@ -27,7 +27,7 @@ import { useSession } from '../lib/auth.tsx'
 import { Empty, Failed, Forbidden, Loading } from '../components/states.tsx'
 import { AsOf, StatusWord } from '../components/tone.tsx'
 
-/** The four states `admin-api` will accept, plus the "no filter" option. server.ts:1055. */
+/** The four states `admin-api` will accept, plus the "no filter" option. server.ts. */
 const STATES: ReadonlyArray<{ value: ApprovalState | ''; label: string }> = [
   { value: 'pending', label: 'Waiting for a decision' },
   { value: 'approved', label: 'Approved' },

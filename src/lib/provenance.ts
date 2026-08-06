@@ -6,7 +6,7 @@
  *
  * "Nothing the model produces can open a market. An operator approves, edits, or discards —
  * because a market is a financial instrument and its resolution criteria are a contract with
- * strangers" (19-new-products.md §2.3.3; restated at foresight/src/ideas.ts:4-16).
+ * strangers" (19-new-products.md §2.3.3; restated at foresight/src/ideas.ts).
  *
  * A queue of cards with an Approve button on each one satisfies that rule on paper and defeats it
  * in practice: the fast path through the screen becomes clicking Approve, and the sources — which
@@ -15,7 +15,7 @@
  * model proposal that cites no sources cannot be approved at all.
  *
  * That second rule is the stronger one and it is deliberate. `ideas_model_has_provenance` means a
- * model-origin row cannot even be stored without provenance (ideas.ts:22), so a sourceless model
+ * model-origin row cannot even be stored without provenance (ideas.ts), so a sourceless model
  * proposal arriving here is not a shape to render defensively around — it is a signal that
  * something upstream is wrong, and approving it would be authoring resolution criteria from
  * nothing at all.

@@ -26,13 +26,13 @@
  * ── WHAT THE SECOND REQUEST ACTUALLY COSTS ON THIS SURFACE ────────────────────────────────────
  *
  * Three of this console's writes carry an `Idempotency-Key` minted per PAGE VIEW rather than per
- * click (`idempotencyKeyFor`, src/lib/gate.ts:376), so both same-tick attempts present the same
+ * click (`idempotencyKeyFor`, src/lib/gate.ts), so both same-tick attempts present the same
  * key and `admin-api`'s wrapper collapses them: it "blocks rather than races" and the duplicate
- * replays the stored response (`admin-api/src/idempotency.ts:9-17`). That half was already right
+ * replays the stored response (`admin-api/src/idempotency.ts`). That half was already right
  * and these scenarios must not break it.
  *
  * The damage is on the two writes that carry NO key, and the sharpest is retraction.
- * `admin-api/src/broadcasts.ts:169-184` claims the row `where retracted_at is null`, and its own
+ * `admin-api/src/broadcasts.ts` claims the row `where retracted_at is null`, and its own
  * comment says a second attempt "is not an error the operator needs to see as a failure — the
  * broadcast is retracted either way" — and then throws, because it must not write a second audit
  * row. It is right to throw. The client is what turns that into a sentence.
@@ -49,7 +49,7 @@
  *
  * ── AND BOTH WAYS ROUND ───────────────────────────────────────────────────────────────────────
  *
- * `src/main.tsx:52` renders under `<StrictMode>`; this harness mounted without it until this file
+ * `src/main.tsx` renders under `<StrictMode>`; this harness mounted without it until this file
  * added `strict`. A ref latch is CREATED TWICE on a StrictMode mount, so a guard proven only in
  * the plain mode has never been run the way the app runs it. Every proof below runs twice.
  *
@@ -462,9 +462,9 @@ for (const strict of [false, true]) {
      * because it is luck rather than design.
      *
      * Under the defect the loser's 409 DOES reach `retract.error`, and `BroadcastRow` renders
-     * `<Failed title="The broadcast was not retracted">` for it (src/pages/broadcasts.tsx:240).
+     * `<Failed title="The broadcast was not retracted">` for it (src/pages/broadcasts.tsx).
      * But the winner's success calls `onRetracted()` -> `list.reload()`, and `useResource`'s
-     * reload sets `loading` (src/lib/resource.ts:81) — which drops `BroadcastsPage` out of its
+     * reload sets `loading` (src/lib/resource.ts) — which drops `BroadcastsPage` out of its
      * `state === 'ok'` branch, UNMOUNTS every row, and takes the error state with it. The row
      * remounts fresh, so what an operator ends up looking at is the truth: "Retracted … A second
      * retraction claims no row and is refused."
@@ -515,7 +515,7 @@ for (const strict of [false, true]) {
           assert.ok(
             typeof key === 'string' && key.length >= 8,
             `the published broadcast carried no usable Idempotency-Key (${String(key)}), which is ` +
-              `what admin-api/src/server.ts:1031 requires and what makes a genuine RETRY safe`,
+              `what admin-api/src/server.ts requires and what makes a genuine RETRY safe`,
           )
         },
       )

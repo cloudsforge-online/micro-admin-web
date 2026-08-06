@@ -45,9 +45,9 @@ export interface EstateEnvironment {
  * The contract these screens were first written to served no field for the estate's own
  * environment, so this derived it: a backup is taken BY this estate OF this estate, so the
  * environment on its own runs is the environment it is. The service that landed serves
- * `estate.environment` from the `estate_identity` row (server.ts:1350) — and that row is not a
+ * `estate.environment` from the `estate_identity` row (server.ts) — and that row is not a
  * label. `requestRestore` reads it and refuses a backup taken elsewhere with
- * `EnvironmentMismatchError` (admin-api/src/backups.ts:608-622), so it is literally one half of the
+ * `EnvironmentMismatchError` (admin-api/src/backups.ts), so it is literally one half of the
  * comparison this screen exists to show.
  *
  * Keeping the derivation alongside it would have been a second, unversioned opinion about a
@@ -305,7 +305,7 @@ function wholeNumber(value: string): number | null {
  * ── WHY THIS WALKS THE OBJECT RATHER THAN NAMING THE FIVE FIELDS ─────────────────────────────
  *
  * `BackupCeilings` is declared now that the service serves a known shape (admin-api's `CEILINGS`,
- * backups.ts:179). Rendering it by walking the entries anyway costs nothing and means a sixth
+ * backups.ts). Rendering it by walking the entries anyway costs nothing and means a sixth
  * bound added to the service appears here rather than being silently withheld — and on a settings
  * form, a bound the operator cannot see is a 400 they will meet later. The declared type is what
  * makes the *known* five typecheck; this is what stops the sixth going missing.

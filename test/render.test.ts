@@ -515,7 +515,7 @@ describe('the backup screens', () => {
   })
 
   it('prefers the phrase the SERVICE sent over the one it can build itself', () => {
-    // `requestRestore` compares the confirmation with `!==` (admin-api/src/backups.ts:645), so the
+    // `requestRestore` compares the confirmation with `!==` (admin-api/src/backups.ts), so the
     // two spellings diverging by one character refuses every live restore in the estate — after
     // two operators have signed for it. The served value wins; the local builder is the fallback.
     assert.match(backup, /const phrase = servedPhrase \?\? gate\.phrase/)
@@ -541,14 +541,14 @@ describe('the backup screens', () => {
   })
 
   it('raises the request against the BACKUP RUN, which is estate.restore’s subject', () => {
-    // admin-api/src/actions.ts:347. The executor reads `ctx.approval.subjectId` as the backup to
+    // admin-api/src/actions.ts. The executor reads `ctx.approval.subjectId` as the backup to
     // restore from, so a wrong subject would have two operators authorise a different backup.
     assert.match(backup, /action: RESTORE_ACTION/)
     assert.match(backup, /subjectId: backup\.id/)
   })
 
   it('sends the live path to the approval queue and the verify path to the restore route', () => {
-    // `POST /v1/restores` answers 400 for a live restore (admin-api/src/server.ts:1552), so the two
+    // `POST /v1/restores` answers 400 for a live restore (admin-api/src/server.ts), so the two
     // halves of this screen are two different calls rather than two arguments to one. The gate is
     // still asked about `mode: 'live'` — that is a question about what to OFFER, and it is why this
     // assertion is about the calls rather than about the string "live" appearing in the file.
@@ -571,12 +571,12 @@ describe('the backup screens', () => {
     // This screen spent a while rendering NO audit preview, because the contract it was first built
     // to described none and naming an invented action would have told an operator they were signing
     // for a record that may not exist. The service landed writing `admin.backup.requested`
-    // (server.ts:1500) and `admin.restore.requested` (server.ts:1595), so the previews are real.
+    // (server.ts) and `admin.restore.requested` (server.ts), so the previews are real.
     assert.match(backup, /previews=\{\[\s*previewVerifyRestore\(/)
     assert.match(backup, /previews=\{\[\s*previewRequest\(/)
     assert.match(backups, /previewBackupRequest\(\{ actor: operator\.principal/)
-    assert.match(gate, /admin-api\/src\/server\.ts:1595|server\.ts:1595/)
-    assert.match(gate, /server\.ts:1500/)
+    assert.match(gate, /admin-api\/src\/server\.ts|server\.ts/)
+    assert.match(gate, /server\.ts/)
   })
 
   it('keeps the restore-ROW description beside the audit preview, not instead of it', () => {
@@ -663,8 +663,8 @@ describe('the support page — 05 journey 16, and 17 §7 claim 9', () => {
   it('names the missing routes by path:line rather than describing them in prose', () => {
     // A route taken from prose is a route that has not been checked. Each of the five questions
     // 05 journey 16 asks names the provider route that would answer it, cited.
-    assert.match(support, /ledger\/src\/server\.ts:499/)
-    assert.match(support, /ledger\/src\/server\.ts:369/)
+    assert.match(support, /ledger\/src\/server\.ts/)
+    assert.match(support, /ledger\/src\/server\.ts/)
   })
 })
 

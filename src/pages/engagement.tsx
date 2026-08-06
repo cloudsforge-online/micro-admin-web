@@ -3,21 +3,21 @@
  *
  * Three reads and one write, and the write only goes DOWN:
  *
- *   `GET /v1/engagement/report`   — **admin-api/src/server.ts:1046**. Balances read off the
+ *   `GET /v1/engagement/report`   — **admin-api/src/server.ts**. Balances read off the
  *                                   ledger, spend per service, and the transfer records. This is
  *                                   21 §6's third action, whose approval column reads "none
  *                                   (read)" — the approval queue REFUSES `engagement.report` and
  *                                   names this route, so a read never spends two signatures.
- *   `GET /v1/engagement/policies` — **admin-api/src/server.ts:956**. The caps and the schema
+ *   `GET /v1/engagement/policies` — **admin-api/src/server.ts**. The caps and the schema
  *                                   ceilings they sit inside.
- *   `PUT /v1/engagement/policies/:service` — **admin-api/src/server.ts:984**. LOWER only. A raise
+ *   `PUT /v1/engagement/policies/:service` — **admin-api/src/server.ts**. LOWER only. A raise
  *                                   answers 403 `raise_needs_approval` and names the action to
  *                                   use instead.
  *
  * ── Why this screen has no "raise" button, and says so rather than hiding it ──────────────────
  *
  * 21 §6 gives raising to `engagement.policy.set`, which is a two-operator approval. That is
- * `micro-devplatform`'s quota asymmetry (`devplatform/src/server.ts:981` — "the direction is the
+ * `micro-devplatform`'s quota asymmetry (`devplatform/src/server.ts` — "the direction is the
  * authority"), and the `engagement_raise_needs_approval` trigger enforces it in the schema, so a
  * console that offered a raise button would be offering a request the estate refuses three ways.
  * An absent control that explains itself is honest; one that 403s is a bug report waiting to be

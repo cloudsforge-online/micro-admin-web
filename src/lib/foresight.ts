@@ -26,15 +26,15 @@
  *   * **There is no `POST /markets/:id/close`.** A market closes when its close time passes: the
  *     CONTRACT stops taking stakes by itself (`ForesightMarket.stake` reverts on
  *     `block.timestamp >= closeTime`), and the `market.close` leased job writes the registry row
- *     to match (`marketCloseHandler`, foresight/src/jobs.ts:277-290, calling `closeMarket` at
- *     markets.ts:443). Close is
+ *     to match (`marketCloseHandler`, foresight/src/jobs.ts, calling `closeMarket` at
+ *     markets.ts). Close is
  *     bookkeeping that follows the chain; there is no operator button for it and this file does
  *     not pretend otherwise. See `lifecycle.ts`.
  *   * **There are no dispute routes.** The dispute window is a market FIELD
- *     (`disputeWindowSeconds`, publicView at markets.ts:625) enforced by the contract, which
+ *     (`disputeWindowSeconds`, publicView at markets.ts) enforced by the contract, which
  *     refuses `claim` until `resolvedAt + disputeWindowSeconds`. A contest inside that window is
  *     handled by `resolved → void`, which is a transition the state table permits for exactly
- *     this reason (markets.ts:55-57). What this panel can do about a dispute is show the window,
+ *     this reason (markets.ts). What this panel can do about a dispute is show the window,
  *     the named source and the posted outcome, and offer the void path.
  *   * **There is no `GET /ideas/:id`.** Only the list. So the queue page loads `GET /ideas` and
  *     finds the row; there is no deep link to one proposal.
@@ -52,7 +52,7 @@
  * is relative. Foresight is a different service on a different host and stays one after the fold
  * (see `FORESIGHT_SURFACE` in lib/hosts.ts). Calling `api('/markets')` here would therefore ask
  * `admin.<apex>/markets`, which no router matches: the gateway's `cf-api-admin` only claims
- * `/v1` on this host (`deploy/gateway/dynamic/estate-web.yml:496`), so the request would fall to
+ * `/v1` on this host (`deploy/gateway/dynamic/estate-web.yml`), so the request would fall to
  * `cf-web-admin` and be answered by this console's own index.html — a 200 carrying HTML where
  * JSON was expected, which is the failure shape this estate has been bitten by repeatedly.
  *
@@ -62,7 +62,7 @@ import { foresight, type RequestOptions } from './api.ts'
 
 /* ══════════════════════════════ the idea queue ══════════════════════════════ */
 
-/** One thing the search step found, kept as it was found. Mirrors `IdeaSource`, ideas.ts:34-39. */
+/** One thing the search step found, kept as it was found. Mirrors `IdeaSource`, ideas.ts. */
 export interface IdeaSource {
   readonly url: string
   readonly title: string
@@ -74,11 +74,11 @@ export type IdeaStatus = 'proposed' | 'approved' | 'discarded'
 export type IdeaOrigin = 'model' | 'operator'
 
 /**
- * A proposal. Mirrors `Idea`, foresight/src/ideas.ts:41-61.
+ * A proposal. Mirrors `Idea`, foresight/src/ideas.ts.
  *
  * The five provenance fields — `searchQuery`, `sources`, `modelId`, `promptSha256`, `proposedAt`
  * — are the reason this screen exists. `ideas_model_has_provenance` means a model-origin row
- * cannot be stored without them (ideas.ts:22), so a model proposal that arrives here with none is
+ * cannot be stored without them (ideas.ts), so a model proposal that arrives here with none is
  * a signal worth refusing on rather than a shape to render defensively around.
  */
 export interface Idea {
@@ -107,9 +107,9 @@ export interface Idea {
 /**
  * The queue.
  *
- * `GET /ideas` — server.ts:648-656. Admin only (`requireAdmin`, line 649). `status` defaults to
+ * `GET /ideas` — server.ts. Admin only (`requireAdmin`, line 649). `status` defaults to
  * `proposed` SERVER-side and must be one of proposed|approved|discarded or the route answers 400
- * (lines 650-653). `limit` is 1..200, default 50 (parseLimit, server.ts:1053-1061).
+ * (lines 650-653). `limit` is 1..200, default 50 (parseLimit, server.ts).
  */
 export function loadIdeas(
   status: IdeaStatus,
@@ -129,14 +129,14 @@ export interface IdeaDraft {
   readonly category: string
   readonly resolutionSourceKind: string
   readonly resolutionSourceRef: string
-  /** ISO-8601. Must be in the future, or ideas.ts:138 answers `bad_close_time`. */
+  /** ISO-8601. Must be in the future, or ideas.ts answers `bad_close_time`. */
   readonly suggestedCloseTime: string
 }
 
 /**
  * An operator writes a question themselves.
  *
- * `POST /ideas` — server.ts:659-678, **201**. `categoryVersion` and `origin: 'operator'` are set
+ * `POST /ideas` — server.ts, **201**. `categoryVersion` and `origin: 'operator'` are set
  * by the SERVER (lines 669, 673) and must not be sent: the version a proposal was judged under is
  * not a client's to state.
  */
@@ -145,7 +145,7 @@ export function createIdea(draft: IdeaDraft, opts?: RequestOptions): Promise<{ i
 }
 
 /**
- * Edit a proposal before approving it. `PATCH /ideas/:id` — server.ts:680-700.
+ * Edit a proposal before approving it. `PATCH /ideas/:id` — server.ts.
  *
  * Named PATCH but every field is required (`requireString`/`requireDate` on all six, lines 689-695), so this
  * sends the whole draft rather than a delta. A partial body answers 400.
@@ -159,9 +159,9 @@ export function editIdea(
 }
 
 /**
- * A person approves. `POST /ideas/:id/approve` — server.ts:702-710.
+ * A person approves. `POST /ideas/:id/approve` — server.ts.
  *
- * The approval is recorded under `operator:<userId>`, and `operatorOf` (server.ts:1016-1021) throws
+ * The approval is recorded under `operator:<userId>`, and `operatorOf` (server.ts) throws
  * `ForbiddenError` for a SERVICE principal even one holding the admin role. That is the transport
  * half of "the AI proposes; a person opens": no machine token can produce this subject.
  */
@@ -173,7 +173,7 @@ export function approveIdea(
   return foresight<{ idea: Idea }>(`/ideas/${id}/approve`, {
     ...opts,
     method: 'POST',
-    // `optionalString` (server.ts:1062-1066) treats a blank string as absent, so an empty note is
+    // `optionalString` (server.ts) treats a blank string as absent, so an empty note is
     // omitted rather than sent as ''. Sending it would be indistinguishable server-side anyway;
     // omitting it keeps the request honest about what the operator actually wrote.
     body: note && note.trim() ? { note: note.trim() } : {},
@@ -183,9 +183,9 @@ export function approveIdea(
 /**
  * Discard, against one of the three named refusals.
  *
- * `POST /ideas/:id/discard` — server.ts:712-727. `refusalId` is REQUIRED (`requireString`, line
+ * `POST /ideas/:id/discard` — server.ts. `refusalId` is REQUIRED (`requireString`, line
  * 722) and must be one of the ids in `GET /categories` — free text is deliberately not accepted,
- * so that a reason can be counted rather than read (categories.ts:104-112).
+ * so that a reason can be counted rather than read (categories.ts).
  */
 export function discardIdea(
   id: string,
@@ -202,7 +202,7 @@ export function discardIdea(
 
 /* ══════════════════════════════ the allowlist ══════════════════════════════ */
 
-/** Mirrors `CategorySpec`, foresight/src/categories.ts:36-49. */
+/** Mirrors `CategorySpec`, foresight/src/categories.ts. */
 export interface CategorySpec {
   readonly id: string
   readonly title: string
@@ -225,8 +225,8 @@ export interface CategoryBoard {
 /**
  * What this platform will and will not run a market on.
  *
- * `GET /categories` — server.ts:487-495. **Public and unauthenticated**, deliberately: "a refusal
- * list behind a token is a refusal list nobody can hold the platform to" (server.ts:485). It is
+ * `GET /categories` — server.ts. **Public and unauthenticated**, deliberately: "a refusal
+ * list behind a token is a refusal list nobody can hold the platform to" (server.ts). It is
  * still fetched with the bearer token here, because sending one costs nothing and the operator
  * always has one.
  */
@@ -248,7 +248,7 @@ export type MarketStatus =
 /**
  * A market, as it leaves the service.
  *
- * Mirrors `publicView`, foresight/src/markets.ts:606-638 — and `publicView` is what BOTH the
+ * Mirrors `publicView`, foresight/src/markets.ts — and `publicView` is what BOTH the
  * public route and every operator route return. It is deliberately narrow: no lease owner, no raw
  * transaction, no custody audit id, no operator subject.
  *
@@ -283,15 +283,15 @@ export interface Market {
 }
 
 /**
- * The mirrored pool. Mirrors `PoolView` as built by `poolOf`, foresight/src/mirror.ts:276-317.
+ * The mirrored pool. Mirrors `PoolView` as built by `poolOf`, foresight/src/mirror.ts.
  *
  * Amounts are decimal STRINGS of wei and stay strings all the way to the DOM — one EMBER is 1e18
  * and a double loses the bottom of that. `yesBps`/`noBps` are exact integers the service computed
- * in bigint before narrowing (mirror.ts:304-307), which is why the chart is drawn from THOSE and
+ * in bigint before narrowing (mirror.ts), which is why the chart is drawn from THOSE and
  * never from a ratio this bundle divides out.
  *
  * `asOf` is null when the mirror has never run, and `stale` is true both then and when it is
- * further behind the tip than the chain's confirmation depth (mirror.ts:313-315). The two are
+ * further behind the tip than the chain's confirmation depth (mirror.ts). The two are
  * different sentences and the UI says which.
  */
 export interface Pool {
@@ -309,7 +309,7 @@ export interface Pool {
   readonly stale: boolean
 }
 
-/** The provenance carried from the idea a market was built from. server.ts:536-545. */
+/** The provenance carried from the idea a market was built from. server.ts. */
 export interface MarketProvenance {
   readonly origin: IdeaOrigin
   readonly searchQuery: string | null
@@ -320,7 +320,7 @@ export interface MarketProvenance {
 }
 
 /**
- * One market with everything needed to judge it. `GET /markets/:id` — server.ts:513-548.
+ * One market with everything needed to judge it. `GET /markets/:id` — server.ts.
  *
  * `document.canonical` is the exact byte string `questionHash` is computed over, so the hash can
  * be recomputed and checked against the contract rather than taken on trust (questiondoc.ts).
@@ -334,10 +334,10 @@ export interface MarketDetail {
 }
 
 /**
- * The market list. `GET /markets` — server.ts:498-504.
+ * The market list. `GET /markets` — server.ts.
  *
  * Public and unauthenticated. `status` must be one of the seven lifecycle states or the route
- * answers 400 (`parseStatus`, server.ts:1047-1051); omitting it lists every status.
+ * answers 400 (`parseStatus`, server.ts); omitting it lists every status.
  */
 export function loadMarkets(
   status: MarketStatus | null,
@@ -353,12 +353,12 @@ export function loadMarkets(
   })
 }
 
-/** One market. `GET /markets/:id` — server.ts:513-548. */
+/** One market. `GET /markets/:id` — server.ts. */
 export function loadMarket(id: string, opts?: RequestOptions): Promise<MarketDetail> {
   return foresight<MarketDetail>(`/markets/${id}`, { ...opts })
 }
 
-/** What `POST /markets` takes. server.ts:731-759. */
+/** What `POST /markets` takes. server.ts. */
 export interface MarketDraft {
   /** The approved proposal this market is built from. Omitted for an operator's own question. */
   readonly ideaId?: string | undefined
@@ -369,14 +369,14 @@ export interface MarketDraft {
   readonly resolutionSourceRef: string
   /** ISO-8601, in the future. */
   readonly closeTime: string
-  /** Seconds, 0..2_592_000. Omitted takes the service default (server.ts:746-749). */
+  /** Seconds, 0..2_592_000. Omitted takes the service default (server.ts). */
   readonly disputeWindowSeconds?: number | undefined
-  /** Basis points, 0..1000. Omitted takes the service default (server.ts:750-751). */
+  /** Basis points, 0..1000. Omitted takes the service default (server.ts). */
   readonly feeBps?: number | undefined
 }
 
 /**
- * Create the draft. `POST /markets` — server.ts:731-759, **201**.
+ * Create the draft. `POST /markets` — server.ts, **201**.
  *
  * `chain` and `network` come from the service's own configuration (lines 752-753) and are not
  * this client's to send. `ideaId` must be a uuid if present (line 736).
@@ -389,10 +389,10 @@ export function createMarket(
 }
 
 /**
- * A person approves the market. `POST /markets/:id/approve` — server.ts:770-849.
+ * A person approves the market. `POST /markets/:id/approve` — server.ts.
  *
  * `draft → approved`. Refused with `idea_not_approved` when the market was built from a proposal
- * nobody approved (markets.ts:365-370) — and refused again by the
+ * nobody approved (markets.ts) — and refused again by the
  * `markets_unapproved_never_opens` constraint if that check were ever removed.
  */
 export function approveMarket(id: string, opts?: RequestOptions): Promise<{ market: Market }> {
@@ -400,18 +400,18 @@ export function approveMarket(id: string, opts?: RequestOptions): Promise<{ mark
 }
 
 /**
- * Deploy the contract. `POST /markets/:id/deploy` — server.ts:858-888, **202**.
+ * Deploy the contract. `POST /markets/:id/deploy` — server.ts, **202**.
  *
  * It reaches no chain: the reply is an acceptance and the work is a leased job. The
  * `Idempotency-Key` header is REQUIRED, 8 to 200 characters (`idempotencyKeyOf`,
- * server.ts:1033-1040), and it is what stops a retried request producing a second contract for one
+ * server.ts), and it is what stops a retried request producing a second contract for one
  * question — "the loss from a double-apply here is not a double payment, it is two pools for one
- * question" (server.ts:855-856).
+ * question" (server.ts).
  *
  * The key is passed in by the caller rather than generated here, so that a retry after a lost
  * response can present THE SAME key. A key minted per attempt makes every retry a fresh
  * operation, which is the opposite of what the header is for — foresight says so itself at
- * server.ts:1029-1031, refusing to default the header for exactly that reason.
+ * server.ts, refusing to default the header for exactly that reason.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **THIS IS THE ONE CALL IN THE BUNDLE THAT NEEDS A CORS PREFLIGHT TO SUCCEED.**
@@ -440,9 +440,9 @@ export function deployMarket(
 }
 
 /**
- * Open for stakes. `POST /markets/:id/open` — server.ts:897-918.
+ * Open for stakes. `POST /markets/:id/open` — server.ts.
  *
- * Refused unless `deploy_state = 'deployed'` and a contract address exists (markets.ts:396, `markets_open_has_contract`),
+ * Refused unless `deploy_state = 'deployed'` and a contract address exists (markets.ts, `markets_open_has_contract`),
  * because "a market that says `open` with no contract address is an invitation to send money to
  * an address that does not exist".
  */
@@ -450,18 +450,18 @@ export function openMarket(id: string, opts?: RequestOptions): Promise<{ market:
   return foresight<{ market: Market }>(`/markets/${id}/open`, { ...opts, method: 'POST' })
 }
 
-/** The resolution plan, as `POST /markets/:id/resolve` returns it. server.ts:943-950. */
+/** The resolution plan, as `POST /markets/:id/resolve` returns it. server.ts. */
 export interface ResolutionAcceptance {
   readonly id: string
   readonly marketId: string
-  /** 0 resolve-YES, 1 resolve-NO, 2 VOID. resolve.ts:55-57. */
+  /** 0 resolve-YES, 1 resolve-NO, 2 VOID. resolve.ts. */
   readonly action: number
   readonly rationale: string
   readonly state: string
 }
 
 /**
- * Post the outcome. `POST /markets/:id/resolve` — server.ts:926-954, **202**.
+ * Post the outcome. `POST /markets/:id/resolve` — server.ts, **202**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THIS MOVES REAL MONEY AND IT IS NOT REVERSIBLE BY THIS PANEL.
@@ -472,17 +472,17 @@ export interface ResolutionAcceptance {
  * Two things the caller must understand, both of which the confirmation dialog states in words:
  *
  *   1. **`outcome: 0` is YES and `outcome: 1` is NO** — `planResolution` maps 0 to
- *      `ACTION_RESOLVE_YES` (resolve.ts:226, constants at resolve.ts:55-57), and the mirror sums
- *      `outcome = 0` into the `yes` pool (mirror.ts:281-282). Getting this backwards pays the
+ *      `ACTION_RESOLVE_YES` (resolve.ts, constants at resolve.ts), and the mirror sums
+ *      `outcome = 0` into the `yes` pool (mirror.ts). Getting this backwards pays the
  *      wrong half of the market.
  *   2. **The service may overrule the outcome with a VOID.** `planResolution` probes the source
  *      the market NAMED AT OPEN, and if it is unreachable the action becomes `ACTION_VOID`
- *      whatever the operator asked for (resolve.ts:225-231). That is not the caller being
+ *      whatever the operator asked for (resolve.ts). That is not the caller being
  *      ignored; it is the rule the market was opened under. So the returned `action` is read and
  *      shown, never assumed to be the one that was requested.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * `rationale` is required and must be non-empty (resolve.ts:221-223).
+ * `rationale` is required and must be non-empty (resolve.ts).
  */
 export function resolveMarket(
   id: string,
@@ -493,13 +493,13 @@ export function resolveMarket(
   return foresight<{ resolution: ResolutionAcceptance }>(`/markets/${id}/resolve`, {
     ...opts,
     method: 'POST',
-    // A JSON NUMBER, not a string: `requireInteger` (server.ts:1073-1084) refuses anything else.
+    // A JSON NUMBER, not a string: `requireInteger` (server.ts) refuses anything else.
     // The opposite of the amount rule on the staking route, and both are deliberate.
     body: { outcome, rationale },
   })
 }
 
-/** Mirrors `Resolution`, foresight/src/resolve.ts:61-79, minus the fields this panel refuses. */
+/** Mirrors `Resolution`, foresight/src/resolve.ts, minus the fields this panel refuses. */
 export interface Resolution {
   readonly id: string
   readonly marketId: string
@@ -516,7 +516,7 @@ export interface Resolution {
 }
 
 /**
- * How the oracle post is going. `GET /markets/:id/resolution` — server.ts:956-964. Admin only.
+ * How the oracle post is going. `GET /markets/:id/resolution` — server.ts. Admin only.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **THE 500 THIS CLIENT USED TO WARN ABOUT IS FIXED, AND THE WARNING IS GONE WITH IT.**
@@ -527,9 +527,9 @@ export interface Resolution {
  * call an operator would actually make failed, while foresight's own tests stayed green because
  * none of them covered the route.
  *
- * That was true when it was written and is not true now. `foresight/src/resolve.ts:120-136`
+ * That was true when it was written and is not true now. `foresight/src/resolve.ts`
  * defines `resolutionView`, which narrows the row and renders the nonce as a decimal STRING, and
- * server.ts:963 serves that instead of the row. Its header credits the report: "Found by
+ * server.ts serves that instead of the row. Its header credits the report: "Found by
  * micro-foresight-admin-web, the first client to call the route."
  *
  * Re-checked against source rather than carried across, because a stale warning is worse than no
@@ -539,7 +539,7 @@ export interface Resolution {
  *
  * The narrowing also closed an exposure, which is why the interface below still omits fields the
  * wire no longer carries: `rawTx`, `oracleAddress`, `resolverAddress` and `custodyAuditId` are the
- * signing path, `resolve.test.ts:377-389` asserts none of them reaches a browser, and this console
+ * signing path, `resolve.test.ts` asserts none of them reaches a browser, and this console
  * asks for none of them. `oracleNonce` IS on the wire now and is deliberately still not read here
  * — an operator needs a resolution's state, not its nonce.
  */
@@ -551,20 +551,20 @@ export function loadResolution(
 }
 
 /**
- * Void a market that has no contract. `POST /markets/:id/void` — server.ts:974-994.
+ * Void a market that has no contract. `POST /markets/:id/void` — server.ts.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THIS ROUTE IS ONLY HALF OF VOID, AND CONFUSING THE HALVES IS HOW THE DATABASE AND THE CHAIN
  * COME TO DISAGREE.
  *
  * It refuses with **409 `on_chain`** for any market that has a `contractAddress`
- * (server.ts:982-989). A DEPLOYED market is voided through the ORACLE — `resolveMarket` above,
+ * (server.ts). A DEPLOYED market is voided through the ORACLE — `resolveMarket` above,
  * whose plan becomes `ACTION_VOID` when the named source is gone. This route exists for the case
  * where there is nothing on chain to void at all: a draft, or an approved market whose contract
  * was never deployed.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * `reason` is required (`requireString`, server.ts:992). A void refunds the pool WHOLE — no fee
+ * `reason` is required (`requireString`, server.ts). A void refunds the pool WHOLE — no fee
  * (19-new-products.md §2.5).
  */
 export function voidMarket(

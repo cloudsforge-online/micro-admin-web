@@ -5,7 +5,7 @@
  * WHY THIS FILE HAD TO EXIST BEFORE THE SHELL COULD BE TOUCHED
  *
  * Everything this repository asserted about `src/components/shell.tsx` was asserted about the
- * FILE. `test/render.test.ts:1-19` says so plainly — "this proves each component IS WIRED to the
+ * FILE. `test/render.test.ts` says so plainly — "this proves each component IS WIRED to the
  * right data, not that the pixels land" — and for the shell that limit bites harder than anywhere
  * else, because the shell's job is almost entirely ORDER: what is first in the tab sequence, where
  * focus lands, what is last in the document.
@@ -161,7 +161,7 @@ describe('consent, on a surface that ships no measurement ID', () => {
     /*
      * `CookieBanner` is mounted in the shell and returns null here: `analyticsId()` reads
      * `<meta name="cf-analytics">`, this console ships none, and the component refuses to draw
-     * without one (ui/packages/ui/src/index.tsx:1196). Asserting the absence is what makes the
+     * without one (ui/packages/ui/src/index.tsx). Asserting the absence is what makes the
      * decision in index.html enforceable — if somebody adds a measurement ID, this test goes red
      * and they have to argue for it rather than ship it quietly.
      */

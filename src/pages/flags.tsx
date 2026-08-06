@@ -1,14 +1,14 @@
 /**
  * Feature flags.
  *
- * `GET /v1/flags` — **admin-api/src/server.ts:774**.
- * `PUT /v1/flags/:key` — **admin-api/src/server.ts:780**. `enabled` must be a boolean
- * (server.ts:785), and `description` and `owner` are required non-empty strings (server.ts:793-794
- * via `requireString`, and again in `setFlag` at flags.ts:99-104 with the reason: "a flag nobody
+ * `GET /v1/flags` — **admin-api/src/server.ts**.
+ * `PUT /v1/flags/:key` — **admin-api/src/server.ts**. `enabled` must be a boolean
+ * (server.ts), and `description` and `owner` are required non-empty strings (server.ts
+ * via `requireString`, and again in `setFlag` at flags.ts with the reason: "a flag nobody
  * owns is a flag nobody switches on").
  *
  * **No `Idempotency-Key` on this route, deliberately.** It is an upsert keyed on the flag key, and
- * it is exempt in `admin-api/src/routeidempotency.test.ts:35-37` with the reason recorded there:
+ * it is exempt in `admin-api/src/routeidempotency.test.ts` with the reason recorded there:
  * a retry writes the same row, and the audit records the value BEFORE and AFTER, so a replayed
  * no-op is visible as one rather than as a second change.
  *
