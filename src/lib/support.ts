@@ -4,13 +4,13 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **WHAT THIS SCREEN EXISTS FOR, AND THE ONE THING IT IS MEASURED AGAINST.**
  *
- * 17-definition-of-done.md:224, claim 9 of the eleven "one platform" tests:
+ * 17-definition-of-done.md, claim 9 of the eleven "one platform" tests:
  *
  *   > One operator view — a support agent can answer any question from one place.
  *   > *Evidence:* an operator answers "where did this user's money go" from `admin-web` alone,
  *   > **by correlation id**, without a `docker logs`.
  *
- * 05-user-journeys.md:450-464 (journey 16) is the same requirement written as a workflow: a user
+ * 05-user-journeys.md (journey 16) is the same requirement written as a workflow: a user
  * says "my balance is wrong", and the agent answers it from this console.
  *
  * The console already had half of it. `/audit` searches `GET /v1/audit?correlationId=…`, which is
@@ -23,7 +23,7 @@
  * ── Why TWO queries, and why they are not one ─────────────────────────────────────────────────
  *
  * `GET /v1/audit`'s filters are equality matches on indexed columns and there is no OR between
- * them (`admin-api/src/server.ts:586`, filters read at :592-599). "Everything about this user" is
+ * them (`admin-api/src/server.ts`, where the audit filters are read). "Everything about this user" is
  * therefore two different questions:
  *
  *   1. `actor=user:<id>`                   — what the user DID.
@@ -37,7 +37,7 @@
  *
  * ── Ordering is by `seq`, compared as a NUMBER ────────────────────────────────────────────────
  *
- * `AuditEvent.seq` is a decimal STRING because a bigint is not a JSON number (`lib/admin.ts:122`).
+ * `AuditEvent.seq` is a decimal STRING because a bigint is not a JSON number (`lib/admin.ts`).
  * Sorting those as strings puts seq 9 after seq 10, which on a timeline reorders the events of an
  * incident and is exactly the kind of wrong that looks right. `compareSeq` compares as `BigInt`.
  *
@@ -55,7 +55,7 @@
  */
 import type { AuditEvent } from './admin.ts'
 
-/** A user id is a uuid — `admin-api/src/server.ts:129` is the same pattern, applied to item ids. */
+/** A user id is a uuid — `admin-api/src/server.ts` is the same pattern, applied to item ids. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
@@ -79,7 +79,7 @@ export type ParsedSubject =
  * with no history.
  *
  * **A correlation id is deliberately not accepted here.** It may be any
- * `[A-Za-z0-9._-]{1,128}` (`admin-api/src/server.ts:128`), which includes every uuid — so an
+ * `[A-Za-z0-9._-]{1,128}` (`admin-api/src/server.ts`), which includes every uuid — so an
  * input box that took either could not tell which it had been given, and would have to guess
  * which column to search. Guessing is not a thing a money surface does. `/audit` already takes a
  * correlation id, this screen takes a user, and the correlation ids it finds link across.
@@ -236,7 +236,7 @@ export function correlationSpine(rows: readonly TimelineRow[]): Spine {
 /**
  * The services 17 §2 requires to mirror their audit rows here.
  *
- * `docs/ecosystem/17-definition-of-done.md:87-88`, on the Done checklist for every service:
+ * `docs/ecosystem/17-definition-of-done.md`, on the Done checklist for every service:
  * "**Audit events** for every privileged action, written in the same transaction as the change,
  * **mirrored to `admin-api`**."
  *
@@ -246,10 +246,10 @@ export function correlationSpine(rows: readonly TimelineRow[]): Spine {
  * `admin-api`'s intake is built: `POST /v1/events` verifies a signature over the exact bytes
  * before parsing them, demands the exact `admin:audit:write` scope, dedupes on the envelope id,
  * and takes the `source` from the authenticated sender rather than the payload
- * (`admin-api/src/server.ts:525-586`). What does not exist is a PRODUCER. The topic it consumes is
- * `*.audit.recorded` (`admin-api/src/server.ts:132`), and a search of every `src/` in the estate
+ * (`admin-api/src/server.ts`). What does not exist is a PRODUCER. The topic it consumes is
+ * `*.audit.recorded` (`admin-api/src/server.ts`), and a search of every `src/` in the estate
  * finds that string in exactly one place: that line. `admin-api`'s own README records the same
- * finding as gap 2 (`admin-api/README.md:367-368`).
+ * finding as gap 2 (`admin-api/README.md`).
  *
  * So the timeline this screen renders contains `admin-api`'s own rows — approvals, decisions,
  * flags, broadcasts, engagement policy — and **nothing from identity, ledger, wallet, settlement,
@@ -340,7 +340,7 @@ export function readAmount(raw: unknown): string | null {
  * The amount an audit row is about, if it names one.
  *
  * The field names are the ones this estate's own actions write: `engagement.transfer` puts
- * `amountShards` in `params` (`admin-api/src/actions.ts:171`), and a ledger movement carries
+ * `amountShards` in `params` (`admin-api/src/actions.ts`), and a ledger movement carries
  * `amount`. Anything else answers null rather than being guessed at — a support screen that
  * hunted through a payload for the first thing that looked like a number would eventually find a
  * nonce and call it money.

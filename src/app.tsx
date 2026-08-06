@@ -9,7 +9,7 @@
  *
  * This console has no public page: every screen reads or writes something only an operator may
  * touch, and `admin-api` verifies the token and the `admin` role on the request itself
- * (`requireOperator`, admin-api/src/server.ts:496 — which also refuses a service token outright,
+ * (`requireOperator`, admin-api/src/server.ts — which also refuses a service token outright,
  * because approval is consent given by a person and a service is not a person). The gate here
  * exists so that a signed-out operator is sent to sign in instead of being shown a screen made
  * entirely of 401s.
@@ -156,7 +156,7 @@ export function App() {
               its children. Wrapping only the children would leave the section's nav visible to a
               signed-out browser. Neither is a security boundary in any case — foresight verifies
               the token and the `admin` role on every one of these routes itself, in
-              `requireAdmin(await authenticate(...))` at foresight/src/server.ts:649, 660, 681,
+              `requireAdmin(await authenticate(...))` at foresight/src/server.ts, 660, 681,
               704, 714, 732, 772, 859, 899, 927, 957 and 976 — but a console that shows a
               signed-out operator a screen made entirely of 401s has failed at its own job.
             */}

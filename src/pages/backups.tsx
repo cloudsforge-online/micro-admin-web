@@ -1,8 +1,8 @@
 /**
  * Backups: what exists, what has ever been proved, and what none of it protects against.
  *
- * `GET /v1/backups` — **admin-api/src/server.ts:1332**. `POST /v1/backups` — **server.ts:1473**.
- * `GET /v1/restores` — **server.ts:1520**. `GET`/`PUT /v1/backups/settings` — **server.ts:1359,
+ * `GET /v1/backups` — **admin-api/src/server.ts**. `POST /v1/backups` — **server.ts**.
+ * `GET /v1/restores` — **server.ts**. `GET`/`PUT /v1/backups/settings` — **server.ts,
  * 1387**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════

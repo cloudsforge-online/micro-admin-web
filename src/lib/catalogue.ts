@@ -7,15 +7,15 @@
  * `identity.role.grant` is a first-class entry in `admin-api`'s catalogue and has no executor,
  * because there is nothing to call: identity has no route that assigns `users.roles`. All 36 of
  * its route definitions were enumerated — `POST /auth/register` hard-codes `['player']`
- * (identity/src/users.ts:104-106) and `POST /organisations/:id/memberships` grants an
+ * (identity/src/users.ts) and `POST /organisations/:id/memberships` grants an
  * ORGANISATION role, which SD-03 is explicit is not a platform role. `admin-api` will not write
  * to identity's database to work around it: rule 1 is one database per service, and it is a CI
  * grep for any connection string that is not the service's own, so a version of `admin-api` that
  * did would fail its own build.
  *
  * So `POST /v1/approvals` with that action answers **501 `action_has_no_upstream`**
- * (admin-api/src/server.ts:660-662, mapped at server.ts:363-375), naming the route identity would
- * need. The reason a queue must refuse it rather than accept it is written at server.ts:657-659:
+ * (admin-api/src/server.ts, mapped at server.ts), naming the route identity would
+ * need. The reason a queue must refuse it rather than accept it is written at server.ts:
  * a queue that accepts work it cannot do lies to the operator waiting on it, and leaves a row at
  * `approved` for ever — which reads in the audit as two operators having authorised something
  * that never happened.
@@ -48,7 +48,7 @@ export interface CatalogueEntry {
   readonly blockedReason: string | null
   /**
    * The upstream route this would call, cited by path and line — or, when blocked, absent.
-   * `admin-api/src/routeidempotency.test.ts:114-122` asserts every executable action cites one.
+   * `admin-api/src/routeidempotency.test.ts` asserts every executable action cites one.
    */
   readonly route: string | null
 }
@@ -57,8 +57,8 @@ export interface CatalogueEntry {
  * Is this action executable?
  *
  * **`route === null` is the whole test**, and it is the same predicate the service uses
- * (`spec.route === null` at admin-api/src/server.ts:660, and `EXECUTABLE_ACTIONS` at
- * actions.ts:149-153). Not a name, not an allowlist in this repository: a second list would be a
+ * (`spec.route === null` at admin-api/src/server.ts, and `EXECUTABLE_ACTIONS` at
+ * actions.ts). Not a name, not an allowlist in this repository: a second list would be a
  * copy of the catalogue, and the copy is the one that goes stale on the day the gap is closed.
  */
 export function availabilityOf(spec: ActionSpec): Availability {
@@ -72,7 +72,7 @@ export function entryFor(spec: ActionSpec): CatalogueEntry {
     availability,
     blockedReason:
       availability === 'unavailable'
-        ? // The service always sets one — `routeidempotency.test.ts:106-112` requires it to be
+        ? // The service always sets one — `routeidempotency.test.ts` requires it to be
           // longer than 80 characters, so whoever unblocks it has something to act on. The
           // fallback exists only so a null cannot render as the word "null" on an operator's
           // screen during an incident.
@@ -116,7 +116,7 @@ export function mayRequest(spec: ActionSpec | undefined): boolean {
 /* ══════════════════════════════ the 501, when it arrives anyway ══════════════════════════════ */
 
 /**
- * The service's code for an action with no upstream. `admin-api/src/server.ts:367`.
+ * The service's code for an action with no upstream. `admin-api/src/server.ts`.
  *
  * A catalogue fetched thirty seconds ago is a claim about the past: an action can be blocked
  * between the read and the write — the estate's whole point is that `actions.ts` changes when the
@@ -136,7 +136,7 @@ export function isNoUpstream(err: { status?: number; code?: string | undefined }
  * Which required parameters are still missing.
  *
  * The service checks `typeof params[name] !== 'string' && typeof params[name] !== 'boolean'`
- * (admin-api/src/server.ts:670) — so `false` is a legal value and an empty string is NOT rejected
+ * (admin-api/src/server.ts) — so `false` is a legal value and an empty string is NOT rejected
  * by that check. This console is stricter on the string case only: a blank `description` on a
  * ledger reversal would be accepted by the route and would be useless to the person reading the
  * journal in six months. Being stricter than the service is safe; being looser is how a client

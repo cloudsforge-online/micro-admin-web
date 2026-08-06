@@ -5,7 +5,7 @@ tamper-evident audit and its chain verification, feature flags and estate-wide b
 
 It is the browser half of `micro-admin-api`. It holds no state of its own, decides nothing, and
 enforces nothing: `admin-api` verifies the token and the `admin` role on every request
-(`requireOperator`, `admin-api/src/server.ts:496`), refuses a service token outright, and enforces
+(`requireOperator`, `admin-api/src/server.ts`), refuses a service token outright, and enforces
 the four-eyes control three separate times. **This console's job is to make all of that legible.**
 
 Design authority: [`ecosystem/22-browser-journeys.md`](https://github.com/cloudsforge-online/micro-docs/blob/main/ecosystem/22-browser-journeys.md)
@@ -21,14 +21,14 @@ and the bundle checks what it can at runtime as a second line.
 The gateway must:
 
 1. **Serve `admin-web` only on `admin.<apex>`, and serve nothing else there.** An operator UI must
-   not share an origin with an unauthenticated public page (19-new-products.md:142): a public page
+   not share an origin with an unauthenticated public page (19-new-products.md): a public page
    on the operator's origin can read whatever that origin can. `src/lib/hosts.ts` refuses to render
    the console at all if it is ever served from a product origin, Forge Hub, the marketing site,
    the status page, the explorer, the developer platform or the account portal.
 2. **Restrict `admin.<apex>` to the operator network** — a VPN, an identity-aware proxy, or an
    allowlist. Not "authenticated": *reachable only from where operators are*. Every other rule in
    this list assumes an attacker cannot open the page at all.
-3. **Require MFA for the `admin` role** (SD-13, and 12-security-decisions.md:57 makes it mandatory
+3. **Require MFA for the `admin` role** (SD-13, and 12-security-decisions.md makes it mandatory
    for accounts holding it). The console cannot check this; the token issuer must.
 4. **Keep refusing `/internal` from outside**, at the priority
    `deploy/gateway/dynamic/policy.yml` already gives it. Those routes take a `userId` as a
@@ -59,7 +59,7 @@ and how this console renders it is the most important design decision in the rep
 `identity.role.grant` — granting a platform role — is a first-class action with full authorisation
 machinery behind it and **no executor**, because identity has no route that assigns `users.roles`.
 `POST /v1/approvals` for it answers **`501 action_has_no_upstream`**, naming the route identity
-would need. The reason it is refused rather than queued is at `admin-api/src/server.ts:657-659`: a
+would need. The reason it is refused rather than queued is at `admin-api/src/server.ts`: a
 queue that accepts work it cannot do lies to the operator waiting on it, and leaves a row at
 `approved` for ever — which reads in the audit as two operators having authorised something that
 never happened.
@@ -95,7 +95,7 @@ documented `update users set roles = array['admin']` under the database owner's 
 ## What folds in at P13
 
 `micro-foresight-admin-web` — the Forge Foresight operator panel: the idea queue, market lifecycle,
-resolution and void. 19-new-products.md:142 and :210 both say so: "kept as its own small surface
+resolution and void. 19-new-products.md and :210 both say so: "kept as its own small surface
 for now and folded into `admin-web` (P13) when that exists".
 
 This console is built for it to fold *into*:
@@ -137,7 +137,7 @@ The seven backup and restore routes were written against an agreed contract whil
 backup module was being built in parallel, and then **re-read against the service when it landed**.
 Four things had moved, and each is recorded where it bites rather than only in one place:
 
-1. **`POST /v1/restores` refuses `mode: "live"`** (server.ts:1552). The only door to a live restore
+1. **`POST /v1/restores` refuses `mode: "live"`** (server.ts). The only door to a live restore
    is the approval queue, so `startVerifyRestore` fixes the mode to `verify` and there is
    deliberately no `startLiveRestore` — a signature accepting both values would offer a call that
    is a 400 on one of them.
@@ -239,8 +239,8 @@ pnpm dev              # http://localhost:5183
 ```
 
 **A local wrinkle that has since been fixed upstream.** The surface registry used to give `admin`
-devPort **3002** while `admin-api` binds **4014** (`admin-api/src/env.ts:167`,
-`admin-api/.env.example:76`), so `pnpm dev` resolved to a port with nothing on it. Production hid
+devPort **3002** while `admin-api` binds **4014** (`admin-api/src/env.ts`,
+`admin-api/.env.example`), so `pnpm dev` resolved to a port with nothing on it. Production hid
 it — the console and its API share an origin behind `admin.<apex>`, so every request is relative.
 
 This repository refused to paper over it with a literal port, because a hard-coded host is a
@@ -277,11 +277,11 @@ imagined surfaces, one of which 403'd every marketplace listing for as long as i
 
 | Journey | The data exists at | What `admin-api` must add |
 | --- | --- | --- |
-| **13** — a stuck withdrawal | `GET /v1/outbound?state=stuck` (`settlement/src/server.ts:495`, defaults to `stuck`, admin user **or** service with the read scope) · `GET /v1/outbound/:id` (`:521`) · `GET /v1/chains/:chain/:network/in-flight` (`:533`) — Chain Health, one row or none by construction | a settlement client and `GET /v1/settlement/outbound`. **`micro-admin-api` has no settlement upstream at all** (`upstreams.ts` has ledger, market and billing only) |
-| **13** — the remedy | `POST /v1/outbound/:id/adjudicate` (`settlement/src/server.ts:558`), `action: 'refund' \| 'confirm'` | a **catalogue action**, not a proxy. See the asymmetry below |
-| **14** — reconciliation drift | `GET /reconciliation` (`ledger/src/server.ts:528`, scope `ledger:read`) returns `runs` **and** `freezes` — `latestRuns`/`listFreezes`, `ledger/src/reconcile.ts:202` and `:173` | one method on the **existing** ledger client (`upstreams.ts:250`) and `GET /v1/reconciliation`. This is the cheapest of the four: the client, the token and the scope are already there |
-| **15** — a fraudulent listing | `GET /v1/moderation/cases` (`market/src/server.ts:1112`) · computed risk indicators, `market/src/risk.ts:67` | `admin-api` **already calls `openCases`** and throws the result away — `estate.ts:175-182` keeps only `count`. The list needs a route; the resolve action already exists and is two-operator |
-| **16** — a balance question | `GET /accounts/:subject/balances` (`ledger/src/server.ts:499`) · `GET /entries?correlationId=` (`ledger/src/server.ts:369`) | both are on the ledger client's route table already; neither is reachable from a browser. `balancesForSubject` is exposed only for engagement subjects (`server.ts:1046`) |
+| **13** — a stuck withdrawal | `GET /v1/outbound?state=stuck` (`settlement/src/server.ts`, defaults to `stuck`, admin user **or** service with the read scope) · `GET /v1/outbound/:id` · `GET /v1/chains/:chain/:network/in-flight` — Chain Health, one row or none by construction | a settlement client and `GET /v1/settlement/outbound`. **`micro-admin-api` has no settlement upstream at all** (`upstreams.ts` has ledger, market and billing only) |
+| **13** — the remedy | `POST /v1/outbound/:id/adjudicate` (`settlement/src/server.ts`), `action: 'refund' \| 'confirm'` | a **catalogue action**, not a proxy. See the asymmetry below |
+| **14** — reconciliation drift | `GET /reconciliation` (`ledger/src/server.ts`, scope `ledger:read`) returns `runs` **and** `freezes` — `latestRuns`/`listFreezes`, both in `ledger/src/reconcile.ts` | one method on the **existing** ledger client (`upstreams.ts`) and `GET /v1/reconciliation`. This is the cheapest of the four: the client, the token and the scope are already there |
+| **15** — a fraudulent listing | `GET /v1/moderation/cases` (`market/src/server.ts`) · computed risk indicators, `market/src/risk.ts` | `admin-api` **already calls `openCases`** and throws the result away — `estate.ts` keeps only `count`. The list needs a route; the resolve action already exists and is two-operator |
+| **16** — a balance question | `GET /accounts/:subject/balances` (`ledger/src/server.ts`) · `GET /entries?correlationId=` (`ledger/src/server.ts`) | both are on the ledger client's route table already; neither is reachable from a browser. `balancesForSubject` is exposed only for engagement subjects (`server.ts`) |
 
 ### The one asymmetry worth stating before anybody builds journey 13
 
@@ -303,12 +303,12 @@ and where the model and the document disagree it takes the stricter one and says
 `/support` reads a log that, in a real deployment, contains **only `admin-api`'s own rows**.
 
 17 §2 requires every service to write an audit event for each privileged action "mirrored to
-`admin-api`" (`17-definition-of-done.md:87-88`). The intake is built and correctly guarded:
+`admin-api`" (`17-definition-of-done.md`). The intake is built and correctly guarded:
 `POST /v1/events` verifies a signature over the exact bytes **before** parsing them, demands the
 exact `admin:audit:write` scope, dedupes on the envelope id, and takes `source` from the
 authenticated sender rather than the payload. What does not exist is a **producer**. The topic it
-consumes is `*.audit.recorded` (`admin-api/src/server.ts:132`), and that string appears in exactly
-one place in the entire estate: that line. `admin-api/README.md:367-368` records the same finding.
+consumes is `*.audit.recorded` (`admin-api/src/server.ts`), and that string appears in exactly
+one place in the entire estate: that line. `admin-api/README.md` records the same finding.
 
 So 17 §7 claim 9 — *"an operator answers 'where did this user's money go' from `admin-web` alone,
 by correlation id"* — is **not** met today, and adding the five routes above would not by itself
@@ -324,15 +324,15 @@ Reported, not fixed.
 
 | Where | What |
 | --- | --- |
-| ~~`micro-web-template`, and `hub-web`, `site`, `foresight-web`, `foresight-admin-web`~~ **fixed** — and `emberkin-web`, which the original report missed | `src/lib/auth.tsx` declared `interface Me { handle?, roles? }` and reads them off the top level of `/auth/me`. Identity nests them under `user` (`identity/src/server.ts:891-903`, `identity/src/users.ts:52-63`). `roles` is therefore always null, `isAdmin` in the company bar is always false, and the switcher hides the three `adminOnly` entries — including this console — from every signed-in operator. Read correctly here; see `src/lib/auth.tsx` and `test/auth.test.ts`. |
+| ~~`micro-web-template`, and `hub-web`, `site`, `foresight-web`, `foresight-admin-web`~~ **fixed** — and `emberkin-web`, which the original report missed | `src/lib/auth.tsx` declared `interface Me { handle?, roles? }` and reads them off the top level of `/auth/me`. Identity nests them under `user` (`identity/src/server.ts`, `identity/src/users.ts`). `roles` is therefore always null, `isAdmin` in the company bar is always false, and the switcher hides the three `adminOnly` entries — including this console — from every signed-in operator. Read correctly here; see `src/lib/auth.tsx` and `test/auth.test.ts`. |
 | ~~`micro-web-template`~~ **fixed**, along with `market-web`, `foresight-web`, `foresight-admin-web` and `status-web`, which were the ones actually affected | The `Dockerfile` never copied `public/` into the build context, so `dist/` in the built image contains no favicon. `test/brand-chrome.test.ts` reads the source tree and passes regardless. §3.3e one layer down. |
-| ~~`micro-ui`~~ **fixed there, and followed here** | `consumeAuthCallback` posted the SSO hand-off code to `/auth/exchange`, which `micro-identity` has never served — it mints with `POST /auth/handoff` and spends with `POST /auth/handoff/redeem` (`identity/src/server.ts:1076` and `:1084`). Every SSO callback in the estate 404'd. `test/api.test.ts:225` in **this** repository asserted the same fictional path, so the client and its test agreed with each other and disagreed with identity — 14 §11's defect class exactly, and the reason nobody noticed. Corrected here to the real route, with the citation. |
+| ~~`micro-ui`~~ **fixed there, and followed here** | `consumeAuthCallback` posted the SSO hand-off code to `/auth/exchange`, which `micro-identity` has never served — it mints with `POST /auth/handoff` and spends with `POST /auth/handoff/redeem`, both in `identity/src/server.ts`. Every SSO callback in the estate 404'd. `test/api.test.ts` in **this** repository asserted the same fictional path, so the client and its test agreed with each other and disagreed with identity — 14 §11's defect class exactly, and the reason nobody noticed. Corrected here to the real route, with the citation. |
 | ~~`micro-ui`~~ **fixed** | `surfaces.ts` gave `admin` devPort 3002; `admin-api` binds 4014. Production is unaffected (same origin); `pnpm dev` resolves to a port with nothing on it. The same class as the foresight 4021/4011 collision that repository already fixed once. |
 
 Nothing was found wrong in `admin-api` itself. Two things about it are worth stating positively,
 because a reader may mistake them for gaps: `PUT /v1/flags/:key` and `DELETE /v1/broadcasts/:id`
 take **no** `Idempotency-Key`, and both exemptions are recorded with their reasons in
-`admin-api/src/routeidempotency.test.ts:32-39`. This client sends none for either, deliberately.
+`admin-api/src/routeidempotency.test.ts`. This client sends none for either, deliberately.
 
 ---
 

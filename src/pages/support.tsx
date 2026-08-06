@@ -1,7 +1,7 @@
 /**
  * Support: "where did this user's money go", answered from one place.
  *
- * `GET /v1/audit` — **admin-api/src/server.ts:586**, filters read at server.ts:592-599. Twice, with
+ * `GET /v1/audit` — **admin-api/src/server.ts**, filters read at server.ts. Twice, with
  * two different filters. That is the only route this screen calls, and it adds none: the pivot it
  * provides is a question nobody had asked of an existing route, not a surface that had to be
  * invented. See `lib/support.ts` for why the question is two queries and not one.
@@ -10,7 +10,7 @@
  * **THIS SCREEN IS THE EVIDENCE FOR 17 §7 CLAIM 9, AND IT IS ALSO THE PLACE THAT SAYS HOW FAR
  * SHORT OF IT THE ESTATE STILL IS.**
  *
- * Claim 9 (`docs/ecosystem/17-definition-of-done.md:224`) is one of the eleven "one platform"
+ * Claim 9 (`docs/ecosystem/17-definition-of-done.md`) is one of the eleven "one platform"
  * tests, and its stated evidence is: *an operator answers "where did this user's money go" from
  * `admin-web` alone, by correlation id, without a `docker logs`.* 05 journey 16 is the same thing
  * as a workflow, and its table names five questions.
@@ -23,8 +23,8 @@
  *
  * The reason it is honest rather than pessimistic: **nothing in the estate mirrors its audit rows
  * yet**. `admin-api`'s intake exists and is properly guarded, but the topic it consumes,
- * `*.audit.recorded` (`admin-api/src/server.ts:132`), has no producer anywhere in the estate —
- * `admin-api/README.md:367-368` records the same finding. So the log this screen reads holds
+ * `*.audit.recorded` (`admin-api/src/server.ts`), has no producer anywhere in the estate —
+ * `admin-api/README.md` records the same finding. So the log this screen reads holds
  * `admin-api`'s own rows and no others, and a screen that rendered that as a complete history
  * would be the exact defect this estate keeps producing: a surface that cannot fail, because it
  * has nothing to be wrong about.
@@ -60,7 +60,7 @@ import { AsOf, StatusWord } from '../components/tone.tsx'
 /**
  * How many rows each of the two queries asks for.
  *
- * `admin-api` caps `limit` at 200 (`parseLimit`, admin-api/src/server.ts:1310). This asks for the
+ * `admin-api` caps `limit` at 200 (`parseLimit`, admin-api/src/server.ts). This asks for the
  * cap on purpose: a support agent reading a disputed balance wants the whole history, and a
  * truncated one is the failure mode that matters here — so when the cap is reached the screen
  * SAYS the answer is partial rather than quietly ending.
@@ -378,7 +378,7 @@ function CoveragePanel({ rows }: { rows: readonly TimelineRow[] }) {
 
       <p className="aw-panel__aside">
         17 §2 requires every service to write an audit event for each privileged action{' '}
-        <em>and mirror it to admin-api</em> (17-definition-of-done.md:87-88). The intake is built
+        <em>and mirror it to admin-api</em> (17-definition-of-done.md). The intake is built
         and properly guarded — <code>POST /v1/events</code> checks a signature over the exact bytes
         before parsing them — but the topic it consumes, <code>*.audit.recorded</code>, has no
         producer anywhere in the estate. Until each service emits it, the five questions 05 journey
@@ -388,7 +388,7 @@ function CoveragePanel({ rows }: { rows: readonly TimelineRow[] }) {
       <h3 className="aw-panel__subtitle">The five questions, and where each stands</h3>
       <table className="aw-table">
         <caption className="aw-table__caption">
-          05-user-journeys.md:455-461, checked against the routes admin-api actually serves.
+          05-user-journeys.md, checked against the routes admin-api actually serves.
         </caption>
         <thead>
           <tr>
@@ -425,13 +425,13 @@ const UNANSWERED: ReadonlyArray<{ question: string; answered: string; needs: str
     question: 'What does the user hold?',
     answered: 'No',
     needs:
-      'ledger GET /accounts/:subject/balances (ledger/src/server.ts:499) — admin-api has the client (upstreams.ts:323) but exposes it only for engagement subjects',
+      'ledger GET /accounts/:subject/balances (ledger/src/server.ts) — admin-api has the client (upstreams.ts) but exposes it only for engagement subjects',
   },
   {
     question: 'How did it get there?',
     answered: 'No',
     needs:
-      'ledger GET /entries?correlationId= (ledger/src/server.ts:369) — real, and admin-api serves no route onto it',
+      'ledger GET /entries?correlationId= (ledger/src/server.ts) — real, and admin-api serves no route onto it',
   },
   {
     question: 'Which service caused each entry?',

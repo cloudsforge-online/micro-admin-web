@@ -10,7 +10,7 @@
  *
  * Every other frontend in the estate is a public surface with a signed-in mode. This one is
  * neither: every screen in it reads or writes something only an operator may touch, and one of
- * its screens authorises a manual ledger reversal. 19-new-products.md:142 gives the rule in a
+ * its screens authorises a manual ledger reversal. 19-new-products.md gives the rule in a
  * line — "an operator UI must not share a bundle with an unauthenticated public page" — and
  * sharing a bundle and sharing an ORIGIN are the same mistake told twice: a public page on the
  * operator's origin can read whatever the operator's origin can.
@@ -29,13 +29,13 @@
  *
  * The gateway is the FIRST gate and this is the second; see the README for what the gateway must
  * enforce. Neither replaces `admin-api`'s own `requireOperator`
- * (`admin-api/src/server.ts:496`), which is the one that actually refuses.
+ * (`admin-api/src/server.ts`), which is the one that actually refuses.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
  * ── The dev port disagreement, reported and now fixed ──────────────────────────────────────────
  *
  * The surface registry gave `admin` devPort **3002** while `admin-api` binds **4014**
- * (`admin-api/src/env.ts:167`, `admin-api/.env.example:76`), so `pnpm dev` resolved to a port
+ * (`admin-api/src/env.ts`, `admin-api/.env.example`), so `pnpm dev` resolved to a port
  * nothing listens on. Production hid it: the console and its API are the same origin behind
  * `admin.<apex>`, so `apiBase()` is `''` and every request is relative.
  *
@@ -66,7 +66,7 @@ export const PRODUCT: SurfaceKey = 'admin'
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE FORESIGHT SCREENS FOLDED IN HERE (P13) AND THEIR API DID NOT MOVE WITH THEM.
  *
- * `19-new-products.md:142` kept the Foresight operator panel as its own surface "for now … folded
+ * `19-new-products.md` kept the Foresight operator panel as its own surface "for now … folded
  * into `admin-web` (P13) when that exists — an operator UI must not share a bundle with an
  * unauthenticated public page". `foresight-web` is that unauthenticated public page, so the panel
  * could not live there; this console has no public page at all, which is why the fold lands here.

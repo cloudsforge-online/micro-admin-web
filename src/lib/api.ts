@@ -105,8 +105,8 @@ export class ApiError extends Error {
  * Pull the sentence, the code and the request id out of a service's error body.
  *
  * The estate's envelope is **nested** — `{error: {code, message, requestId}}`, built by
- * `errorReply()` in every service (`hub-api/src/server.ts:589`, `identity/src/server.ts:1431`,
- * `service-template/src/server.ts:342`). This function used to read it as flat, assigning
+ * `errorReply()` in every service (`hub-api/src/server.ts`, `identity/src/server.ts`,
+ * `service-template/src/server.ts`). This function used to read it as flat, assigning
  * `data.error` — an object — straight to the displayed message. Every server-side failure in
  * every app cut from this template would have rendered as `[object Object]`, with the real
  * message, the code and the request id all present in the response and all discarded. The
@@ -256,7 +256,7 @@ export interface RequestOptions {
    * Extra request headers.
    *
    * Added to the template's copy of this file because EVERY mutating route on `admin-api` needs
-   * one. `withIdempotentRoute` (admin-api/src/server.ts:988) answers 400 without an
+   * one. `withIdempotentRoute` (admin-api/src/server.ts) answers 400 without an
    * `Idempotency-Key` of 8 to 200 characters, and `routeidempotency.test.ts` in that repository
    * enumerates the routes from source so a new one cannot be added without either the wrapper or
    * a written reason. It is a header rather than a body field on purpose — the key is what stops

@@ -56,7 +56,7 @@ export const page = (events: readonly AuditEvent[], nextCursor: string | null = 
 })
 
 /**
- * The estate's error envelope. `admin-api/src/server.ts` and `service-template/src/server.ts:342`
+ * The estate's error envelope. `admin-api/src/server.ts` and `service-template/src/server.ts`
  * are the same three lines.
  */
 export const errorBody = (

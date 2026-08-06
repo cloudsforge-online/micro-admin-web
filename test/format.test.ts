@@ -120,7 +120,7 @@ describe('deadlines', () => {
     assert.match(result.label, /deadline passed/)
   })
 
-  it('treats the exact boundary as passed, matching approvals.ts:263', () => {
+  it('treats the exact boundary as passed, matching approvals.ts', () => {
     assert.equal(deadline(NOW.toISOString(), NOW).passed, true)
   })
 

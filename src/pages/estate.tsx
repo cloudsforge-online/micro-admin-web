@@ -1,8 +1,8 @@
 /**
  * The estate view: six tiles, one call, and never a blank page.
  *
- * `GET /v1/estate` — **admin-api/src/server.ts:879**. It answers 200 with a dead upstream
- * (server.ts:895-897), so this screen has no failure mode in which an incident hides the console
+ * `GET /v1/estate` — **admin-api/src/server.ts**. It answers 200 with a dead upstream
+ * (server.ts), so this screen has no failure mode in which an incident hides the console
  * that exists to be read during one. A tile that could not be composed says which upstream and
  * why, in the service's own words; every other tile still says what it knows.
  *

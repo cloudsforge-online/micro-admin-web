@@ -1,10 +1,10 @@
 /**
  * One backup run — what is in it, what it has ever proved, and the two ways to restore it.
  *
- * `GET /v1/backups/:id` — **admin-api/src/server.ts:1445**. `GET /v1/backups` — **server.ts:1332**,
- * for the estate's own environment. `GET /v1/actions` — **server.ts:638**, for the closed reason-code
- * list. `POST /v1/restores` — **server.ts:1546**, verify only. `POST /v1/approvals` —
- * **server.ts:674**, which is the only door to a live restore.
+ * `GET /v1/backups/:id` — **admin-api/src/server.ts**. `GET /v1/backups` — **server.ts**,
+ * for the estate's own environment. `GET /v1/actions` — **server.ts**, for the closed reason-code
+ * list. `POST /v1/restores` — **server.ts**, verify only. `POST /v1/approvals` —
+ * **server.ts**, which is the only door to a live restore.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE FIVE THINGS THIS SCREEN HAS TO GET RIGHT.
@@ -12,7 +12,7 @@
  * **1. Verify and live are not two settings of one control — and the SERVICE agrees.** A verify
  * restore reads the artefacts into a throwaway scratch database, proves they read back, and drops
  * it: nothing live is touched, and `POST /v1/restores` takes it with one operator. That same route
- * **refuses `mode: "live"` outright** (server.ts:1552), answering 400 with the route to use
+ * **refuses `mode: "live"` outright** (server.ts), answering 400 with the route to use
  * instead. So the two halves of this screen are not two shapes of one form; they are two different
  * routes, and the console could not merge them if it wanted to.
  *
@@ -30,8 +30,8 @@
  * it has walked them through the ceremony that means "I have read this and I mean it".
  *
  * **4. The phrase is the service's, and is now literally served.** `GET /v1/backups/:id` returns
- * `liveConfirmationPhrase` (server.ts:1460), built by the same `expectedConfirmation` that
- * `requestRestore` compares with `!==` (backups.ts:645). The screen renders THAT, so the string an
+ * `liveConfirmationPhrase` (server.ts), built by the same `expectedConfirmation` that
+ * `requestRestore` compares with `!==` (backups.ts). The screen renders THAT, so the string an
  * operator types cannot diverge from the string that will be checked.
  * `restoreConfirmationPhrase` in lib/gate.ts remains only as the fallback for a response without
  * it, and when neither yields a phrase the action is not offered at all rather than offered with a
@@ -92,7 +92,7 @@ import { Facts, StatusWord } from '../components/tone.tsx'
 import { IrreversibleAction, ReversibleAction } from '../components/irreversible.tsx'
 import { CustodyKeyringNote } from '../components/protection.tsx'
 
-/** The action `admin-api` runs a live restore through. `admin-api/src/actions.ts:346`. */
+/** The action `admin-api` runs a live restore through. `admin-api/src/actions.ts`. */
 const RESTORE_ACTION = 'estate.restore'
 
 interface View {
@@ -116,7 +116,7 @@ export function BackupPage() {
       //   * the list, for `estate` — the environment admin-api will check this backup against, and
       //     the other half of the comparison this screen exists to show;
       //   * the catalogue, for the CLOSED reason-code list `POST /v1/approvals` validates against
-      //     (server.ts:638). Hard-coding those would be a second copy of a list the service owns,
+      //     (server.ts). Hard-coding those would be a second copy of a list the service owns,
       //     and the copy is the one that goes stale.
       //
       // `Promise.all` rather than `allSettled`: unlike the estate view, this screen has no partial
@@ -593,12 +593,12 @@ function toggled(chosen: readonly string[], target: string, on: boolean): string
 /**
  * The safe half: restore into a throwaway scratch database, prove it reads back, drop it.
  *
- * `POST /v1/restores` — **admin-api/src/server.ts:1546**, with `mode` fixed to `verify` because
+ * `POST /v1/restores` — **admin-api/src/server.ts**, with `mode` fixed to `verify` because
  * that is the only value the route accepts.
  *
  * A `ReversibleAction`, because nothing live is touched and the service asks for neither a
  * confirmation phrase nor an approval. That asymmetry is the service's own and it is load-bearing
- * rather than lenient (server.ts:1533-1545): "if the only available restore were the terrifying
+ * rather than lenient (server.ts): "if the only available restore were the terrifying
  * one, no restore would ever be rehearsed and every backup would stay a wish."
  */
 function VerifyRestore({
@@ -720,14 +720,14 @@ function VerifyRestore({
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THIS RAISES A REQUEST. IT DOES NOT RESTORE ANYTHING.
  *
- * `POST /v1/restores` refuses `mode: "live"` (server.ts:1552) and names the way in: an
- * `estate.restore` approval. So this control posts to `POST /v1/approvals` (server.ts:674), the
+ * `POST /v1/restores` refuses `mode: "live"` (server.ts) and names the way in: an
+ * `estate.restore` approval. So this control posts to `POST /v1/approvals` (server.ts), the
  * request sits in the queue until a SECOND operator decides it, and the executor
  * (`admin-api/src/approvals.ts` `estate.restore`) is what creates the live restore.
  *
  * The typed phrase is therefore not a client-side ceremony that ends at this form. It becomes
  * `params.confirmation` on the request, `requestRestore` compares it with `!==` at execution time
- * (backups.ts:645), and — the part that makes this better than a modal — the second operator reads
+ * (backups.ts), and — the part that makes this better than a modal — the second operator reads
  * it on the approval page before they sign. One person types "restore mainnet from
  * 2026-08-04T12:00:00Z"; another person reads it and agrees.
  *
@@ -777,7 +777,7 @@ function LiveRestore({
       requestApproval(
         {
           action: RESTORE_ACTION,
-          // `estate.restore`'s subject is the BACKUP RUN — admin-api/src/actions.ts:347 — and the
+          // `estate.restore`'s subject is the BACKUP RUN — admin-api/src/actions.ts — and the
           // executor reads `ctx.approval.subjectId` as the backup to restore from. Getting this
           // wrong would authorise a restore of a different backup than the one on screen.
           subjectId: backup.id,

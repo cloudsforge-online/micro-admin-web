@@ -7,16 +7,16 @@
  * **1. The irreversible action is legible, not fast.** Everything else in a console should get
  * out of the way. A decision on an approval must not: granting one runs a ledger reversal, a
  * marketplace case resolution or an entitlement revocation against a real upstream, and
- * `admin-api` does not roll it back if it fails (server.ts:753-767). Rejecting one is terminal —
- * `decide()` refuses any transition out of a decided state (approvals.ts:258-260). So the shape
+ * `admin-api` does not roll it back if it fails (server.ts). Rejecting one is terminal —
+ * `decide()` refuses any transition out of a decided state (approvals.ts). So the shape
  * is: the consequence in SENTENCES, then the facts the decision turns on, then a rationale, then
  * a phrase the operator writes out naming the request AND the outcome. Never "Are you sure?" —
  * that question has never once been answered "no" by somebody about to make a mistake, because
  * the person about to make a mistake believes they are sure.
  *
  * **2. The four-eyes control is legible, not merely obeyed.** `admin-api` enforces it three
- * times — the route (`SelfApprovalError`, approvals.ts:262), the UPDATE's `and requested_by <>
- * ${operator}` (approvals.ts:277), and the `approvals_no_self_approval` CHECK constraint. A
+ * times — the route (`SelfApprovalError`, approvals.ts), the UPDATE's `and requested_by <>
+ * ${operator}` (approvals.ts), and the `approvals_no_self_approval` CHECK constraint. A
  * console that simply let the operator press the button and read the 403 has obeyed the rule and
  * taught them nothing. So the control is replaced by a sentence naming who raised it and what has
  * to happen next.
@@ -129,8 +129,8 @@ export interface DecisionGate {
  * ── Why `pastDeadline` is computed here rather than read off `state` ──────────────────────────
  *
  * An approval expires when its deadline passes, but the ROW only says `expired` once the leased
- * job has run (`expirePending`, approvals.ts:404). Between the deadline and the sweep the row
- * still reads `pending` and `decide()` will answer 409 (approvals.ts:263-265). A console that
+ * job has run (`expirePending`, approvals.ts). Between the deadline and the sweep the row
+ * still reads `pending` and `decide()` will answer 409 (approvals.ts). A console that
  * trusted `state` alone would offer a live-looking Approve button for a request that cannot be
  * approved — so the deadline is compared against a clock the caller passes in.
  *
@@ -219,12 +219,12 @@ function alreadyDecided(approval: Approval): string {
  *
  *     restore <environment> from <the backup's queuedAt as YYYY-MM-DDTHH:MM:SSZ>
  *
- * and `requestRestore` compares it with `!==` (admin-api/src/backups.ts:645). Getting the format
+ * and `requestRestore` compares it with `!==` (admin-api/src/backups.ts). Getting the format
  * wrong is not a cosmetic bug — it is every live restore in the estate being refused, discovered
  * during the incident that made somebody need one.
  *
  * **So this is the FALLBACK, not the source.** `GET /v1/backups/:id` serves the phrase the service
- * itself will compare (`expectedConfirmation`, server.ts:1460), and the screen uses that. This
+ * itself will compare (`expectedConfirmation`, server.ts), and the screen uses that. This
  * function reproduces it from the same fields — `utcSecondStamp` matches the service's own
  * `toISOString().slice(0, 19) + 'Z'` — so a response without the field still yields a usable
  * phrase, and `test/backups.test.ts` pins the spelling against the service's.
@@ -307,7 +307,7 @@ export function restoreGate(input: {
   /**
    * The reason code chosen for the `estate.restore` request. Only `live` needs one.
    *
-   * `POST /v1/approvals` validates it against a CLOSED list (admin-api/src/approvals.ts:53-61) and
+   * `POST /v1/approvals` validates it against a CLOSED list (admin-api/src/approvals.ts) and
    * answers 400 for anything else, so an empty box here is a refusal the console can state rather
    * than a 400 the operator has to interpret.
    */
@@ -350,7 +350,7 @@ export function restoreGate(input: {
         estateEnvironment,
       )}. admin-api compares the environment stamped inside the artefacts against the estate it ` +
         'is running in and refuses the pair with EnvironmentMismatchError ' +
-        '(admin-api/src/backups.ts:620), and it is right to: restoring one environment’s data over ' +
+        '(admin-api/src/backups.ts), and it is right to: restoring one environment’s data over ' +
         'another’s is how a rehearsal becomes an incident. Nothing here will raise it.',
     )
   }
@@ -380,8 +380,8 @@ export function restoreGate(input: {
  * The first version of this screen was written against a contract that said nothing about audit
  * rows, so it rendered these sentences INSTEAD of an `AuditRecordPreview` — naming an action the
  * service might not write would have told an operator they were signing for a record that does not
- * exist. The service landed writing `admin.backup.requested` (server.ts:1500) and
- * `admin.restore.requested` (server.ts:1595), so the preview is real and is rendered.
+ * exist. The service landed writing `admin.backup.requested` (server.ts) and
+ * `admin.restore.requested` (server.ts), so the preview is real and is rendered.
  *
  * These stay, because they describe something the audit row does not: the `restore_runs` row, which
  * is where `checksumsVerified`, `artefactEnvironment` and the eventual outcome live. The audit says
@@ -427,16 +427,16 @@ export function restoreRecordLines(input: {
  * Reproduced from `admin-api`'s own `appendAudit` calls rather than invented:
  *
  *   * raising a request — `admin.approval.requested`, subject `approval`, outcome `allowed`
- *     (admin-api/src/approvals.ts:208-227)
- *   * granting — `admin.approval.granted` (approvals.ts:284-306)
- *   * rejecting — `admin.approval.rejected` (the same call, `input.grant` false at :288)
+ *     (admin-api/src/approvals.ts)
+ *   * granting — `admin.approval.granted` (approvals.ts)
+ *   * rejecting — `admin.approval.rejected` (the same call, with `input.grant` false)
  *   * the execution that follows a grant — `admin.approval.executed`, and note that its SUBJECT
  *     is the approval's subject rather than the approval, with outcome `allowed` on success and
- *     `failed` on failure (approvals.ts:346-365)
+ *     `failed` on failure (approvals.ts)
  *   * a flag change — `admin.flag.created` on the first write of a key and
- *     `admin.flag.changed` afterwards (flags.ts:126-142)
+ *     `admin.flag.changed` afterwards (flags.ts)
  *   * a broadcast — `admin.broadcast.published` / `admin.broadcast.retracted`
- *     (broadcasts.ts:124-131, :187-194)
+ *     (broadcasts.ts)
  *
  * The ACTOR is always the signed-in operator and is never a field this console sends: `admin-api`
  * derives it from the verified bearer on every mutating route. It is shown here because the
@@ -481,11 +481,11 @@ export function previewRequest(input: {
 }
 
 /**
- * The audit row `POST /v1/restores` writes — **admin-api/src/server.ts:1595**.
+ * The audit row `POST /v1/restores` writes — **admin-api/src/server.ts**.
  *
  * Note the SUBJECT: `backup_run` and the backup's id, not the restore's. The row records what was
  * acted on rather than the record of the acting, exactly as `admin.approval.executed` does
- * (approvals.ts:350-351), so an operator searching the audit for a backup finds every restore ever
+ * (approvals.ts), so an operator searching the audit for a backup finds every restore ever
  * attempted from it.
  */
 export function previewVerifyRestore(input: {
@@ -512,7 +512,7 @@ export function previewVerifyRestore(input: {
 }
 
 /**
- * The audit row `POST /v1/backups` writes — **admin-api/src/server.ts:1500**.
+ * The audit row `POST /v1/backups` writes — **admin-api/src/server.ts**.
  */
 export function previewBackupRequest(input: {
   actor: string | null
@@ -559,7 +559,7 @@ export function previewDecision(approval: Approval, grant: boolean, actor: strin
     decision,
     {
       actor: actor ?? UNKNOWN_ACTOR,
-      // The execution row's subject is the THING ACTED ON, not the approval — approvals.ts:350-351.
+      // The execution row's subject is the THING ACTED ON, not the approval — approvals.ts.
       action: 'admin.approval.executed',
       subjectKind: approval.subjectKind,
       subjectId: approval.subjectId,
@@ -635,7 +635,7 @@ export function previewBroadcast(input: {
  * A key for one INTENTION, not one click.
  *
  * `withIdempotentRoute` requires 8 to 200 characters and answers 400 without one
- * (admin-api/src/server.ts:988-998), and its whole purpose is that a retry after a lost response
+ * (admin-api/src/server.ts), and its whole purpose is that a retry after a lost response
  * presents THE SAME key and gets the same answer instead of a second artefact. A key generated
  * inside a click handler would make every retry a fresh operation — the failure the header exists
  * to prevent, implemented by the client that was supposed to prevent it.
@@ -643,7 +643,7 @@ export function previewBroadcast(input: {
  * So the key is derived from what the operator is deciding about, plus a mint time held for the
  * life of the page. Reloading the page mints a new one, which is correct: a reload is a new
  * intention, and the service's own state checks refuse a second decision on a decided request
- * anyway (`state_conflict`, server.ts:395).
+ * anyway (`state_conflict`, server.ts).
  */
 export function idempotencyKeyFor(scope: string, subject: string, mintedAt: number): string {
   // ── THE SUBJECT IS NOT ALWAYS A UUID, AND THIS IS A HEADER VALUE.

@@ -95,7 +95,7 @@ function only(): { method: string; url: URL; body: unknown; headers: Record<stri
 /* ══════════════════════════════ the idea queue ══════════════════════════════ */
 
 describe('the idea queue', () => {
-  it('GET /ideas — server.ts:546', async () => {
+  it('GET /ideas — server.ts', async () => {
     await loadIdeas('proposed')
     const call = only()
     assert.equal(call.method, 'GET')
@@ -103,7 +103,7 @@ describe('the idea queue', () => {
     assert.equal(call.url.pathname, '/ideas')
     assert.equal(call.url.searchParams.get('status'), 'proposed')
     // Omitted rather than sent as an empty string: `parseLimit` refuses anything that is not a
-    // whole number between 1 and 200 (server.ts:852-859), and '' is not one.
+    // whole number between 1 and 200 (server.ts), and '' is not one.
     assert.equal(call.url.searchParams.has('limit'), false)
   })
 
@@ -114,7 +114,7 @@ describe('the idea queue', () => {
     assert.equal(call.url.searchParams.get('limit'), '25')
   })
 
-  it('POST /ideas sends the six fields the route requires, and nothing it sets itself — server.ts:557', async () => {
+  it('POST /ideas sends the six fields the route requires, and nothing it sets itself — server.ts', async () => {
     await createIdea({
       question: 'Will block 9,000,000 be mined by 2027-01-01?',
       resolutionCriteria: 'YES if the Hearth explorer shows height >= 9000000 at the close time.',
@@ -135,13 +135,13 @@ describe('the idea queue', () => {
       'resolutionSourceRef',
       'suggestedCloseTime',
     ])
-    // `categoryVersion` and `origin` are set by the SERVER (server.ts:567, 572). A client that
+    // `categoryVersion` and `origin` are set by the SERVER (server.ts, 572). A client that
     // sent them would be stating the rules a proposal was judged under, which is not its to say.
     assert.equal('categoryVersion' in body, false)
     assert.equal('origin' in body, false)
   })
 
-  it('PATCH /ideas/:id sends the WHOLE draft, because the route requires every field — server.ts:578', async () => {
+  it('PATCH /ideas/:id sends the WHOLE draft, because the route requires every field — server.ts', async () => {
     await editIdea(IDEA_ID, {
       question: 'q',
       resolutionCriteria: 'c',
@@ -153,12 +153,12 @@ describe('the idea queue', () => {
     const call = only()
     assert.equal(call.method, 'PATCH')
     assert.equal(call.url.pathname, `/ideas/${IDEA_ID}`)
-    // Named PATCH, behaves like PUT: all six are `requireString`/`requireDate` (server.ts:585-593)
+    // Named PATCH, behaves like PUT: all six are `requireString`/`requireDate` (server.ts)
     // and a partial body answers 400.
     assert.equal(Object.keys(call.body as object).length, 6)
   })
 
-  it('POST /ideas/:id/approve — server.ts:600', async () => {
+  it('POST /ideas/:id/approve — server.ts', async () => {
     await approveIdea(IDEA_ID, 'checked both sources against the explorer')
     const call = only()
     assert.equal(call.method, 'POST')
@@ -171,12 +171,12 @@ describe('the idea queue', () => {
     assert.deepEqual(only().body, {})
   })
 
-  it('POST /ideas/:id/discard names one of the three refusals — server.ts:610', async () => {
+  it('POST /ideas/:id/discard names one of the three refusals — server.ts', async () => {
     await discardIdea(IDEA_ID, 'unverifiable_resolution', null)
     const call = only()
     assert.equal(call.method, 'POST')
     assert.equal(call.url.pathname, `/ideas/${IDEA_ID}/discard`)
-    // `refusalId` is `requireString` (server.ts:620) — free text is deliberately not accepted, so
+    // `refusalId` is `requireString` (server.ts) — free text is deliberately not accepted, so
     // that a reason can be counted rather than read.
     assert.deepEqual(call.body, { refusalId: 'unverifiable_resolution' })
   })
@@ -193,19 +193,19 @@ describe('the idea queue', () => {
 /* ══════════════════════════════ markets ══════════════════════════════ */
 
 describe('markets', () => {
-  it('GET /categories — server.ts:391', async () => {
+  it('GET /categories — server.ts', async () => {
     await loadCategories()
     const call = only()
     assert.equal(call.method, 'GET')
     assert.equal(call.url.pathname, '/categories')
   })
 
-  it('GET /markets with no status omits the parameter entirely — server.ts:402', async () => {
+  it('GET /markets with no status omits the parameter entirely — server.ts', async () => {
     await loadMarkets(null)
     const call = only()
     assert.equal(call.method, 'GET')
     assert.equal(call.url.pathname, '/markets')
-    // `parseStatus` answers 400 for anything outside the seven states (server.ts:846-850), and
+    // `parseStatus` answers 400 for anything outside the seven states (server.ts), and
     // '' is outside them. Absent means "every status"; empty means a bad request.
     assert.equal(call.url.searchParams.has('status'), false)
   })
@@ -217,14 +217,14 @@ describe('markets', () => {
     assert.equal(call.url.searchParams.get('limit'), '10')
   })
 
-  it('GET /markets/:id — server.ts:417', async () => {
+  it('GET /markets/:id — server.ts', async () => {
     await loadMarket(MARKET_ID)
     const call = only()
     assert.equal(call.method, 'GET')
     assert.equal(call.url.pathname, `/markets/${MARKET_ID}`)
   })
 
-  it('POST /markets sends the draft and never the chain — server.ts:629', async () => {
+  it('POST /markets sends the draft and never the chain — server.ts', async () => {
     await createMarket({
       ideaId: IDEA_ID,
       question: 'q',
@@ -239,12 +239,12 @@ describe('markets', () => {
     assert.equal(call.url.pathname, '/markets')
     const body = call.body as Record<string, unknown>
     assert.equal(body['ideaId'], IDEA_ID)
-    // `chain` and `network` come from the service's configuration (server.ts:651-652).
+    // `chain` and `network` come from the service's configuration (server.ts).
     assert.equal('chain' in body, false)
     assert.equal('network' in body, false)
   })
 
-  it('POST /markets/:id/approve — server.ts:660', async () => {
+  it('POST /markets/:id/approve — server.ts', async () => {
     await approveMarket(MARKET_ID)
     const call = only()
     assert.equal(call.method, 'POST')
@@ -252,7 +252,7 @@ describe('markets', () => {
     assert.equal(call.body, undefined)
   })
 
-  it('POST /markets/:id/open — server.ts:710', async () => {
+  it('POST /markets/:id/open — server.ts', async () => {
     await openMarket(MARKET_ID)
     const call = only()
     assert.equal(call.method, 'POST')
@@ -263,12 +263,12 @@ describe('markets', () => {
 /* ══════════════════════════════ the idempotency key ══════════════════════════════ */
 
 describe('deploy', () => {
-  it('POST /markets/:id/deploy sends the Idempotency-Key header the route requires — server.ts:678, 832', async () => {
+  it('POST /markets/:id/deploy sends the Idempotency-Key header the route requires — server.ts, 832', async () => {
     await deployMarket(MARKET_ID, 'deploy-key-12345678')
     const call = only()
     assert.equal(call.method, 'POST')
     assert.equal(call.url.pathname, `/markets/${MARKET_ID}/deploy`)
-    // Without it the route answers 400 (server.ts:832-838). It is a HEADER, not a body field.
+    // Without it the route answers 400 (server.ts). It is a HEADER, not a body field.
     assert.equal(call.headers['idempotency-key'], 'deploy-key-12345678')
   })
 
@@ -284,13 +284,13 @@ describe('deploy', () => {
 /* ══════════════════════════════ the two that move money ══════════════════════════════ */
 
 describe('resolve', () => {
-  it('POST /markets/:id/resolve sends outcome as a JSON NUMBER — server.ts:727, 731', async () => {
+  it('POST /markets/:id/resolve sends outcome as a JSON NUMBER — server.ts, 731', async () => {
     await resolveMarket(MARKET_ID, 0, 'the explorer showed height 9,000,013 at 00:00:00Z')
     const call = only()
     assert.equal(call.method, 'POST')
     assert.equal(call.url.pathname, `/markets/${MARKET_ID}/resolve`)
     const body = call.body as Record<string, unknown>
-    // `requireInteger` (server.ts:872-883) refuses a string. The opposite of the staking route's
+    // `requireInteger` (server.ts) refuses a string. The opposite of the staking route's
     // amount rule, and both are deliberate.
     assert.equal(typeof body['outcome'], 'number')
     assert.equal(body['outcome'], 0)
@@ -300,11 +300,11 @@ describe('resolve', () => {
   it('sends 1 for NO, and 1 really is NO', async () => {
     await resolveMarket(MARKET_ID, 1, 'it did not happen')
     // `planResolution` maps 0 → ACTION_RESOLVE_YES and anything else → ACTION_RESOLVE_NO
-    // (resolve.ts:226). Getting this backwards pays the wrong half of the market.
+    // (resolve.ts). Getting this backwards pays the wrong half of the market.
     assert.equal((only().body as Record<string, unknown>)['outcome'], 1)
   })
 
-  it('GET /markets/:id/resolution — server.ts:757', async () => {
+  it('GET /markets/:id/resolution — server.ts', async () => {
     await loadResolution(MARKET_ID)
     const call = only()
     assert.equal(call.method, 'GET')
@@ -313,7 +313,7 @@ describe('resolve', () => {
 })
 
 describe('void', () => {
-  it('POST /markets/:id/void sends the required reason — server.ts:773, 790', async () => {
+  it('POST /markets/:id/void sends the required reason — server.ts, 790', async () => {
     await voidMarket(MARKET_ID, 'the named source no longer publishes this series')
     const call = only()
     assert.equal(call.method, 'POST')
@@ -333,7 +333,7 @@ describe('the surface this bundle believes in', () => {
 
   it('declares no close route, because there is none to call', () => {
     // A market closes when its close time passes: the contract stops taking stakes by itself and
-    // the `market.close` leased job writes the registry to match (jobs.ts:212-229). An operator
+    // the `market.close` leased job writes the registry to match (jobs.ts). An operator
     // button here would be an invented route AND a lie about who closes a market.
     assert.equal(
       FORESIGHT_ROUTES.some((r) => r.includes('/close')),
@@ -343,7 +343,7 @@ describe('the surface this bundle believes in', () => {
 
   it('declares no dispute route, because there is none', () => {
     // The dispute window is a market field the contract enforces. A contest inside it is handled
-    // by `resolved → void`, which is a transition the state table permits (markets.ts:55-57).
+    // by `resolved → void`, which is a transition the state table permits (markets.ts).
     assert.equal(
       FORESIGHT_ROUTES.some((r) => r.toLowerCase().includes('dispute')),
       false,

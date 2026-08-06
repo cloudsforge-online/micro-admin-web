@@ -2,7 +2,7 @@
  * Session state for the tree, the gate in front of every route, and WHO THE OPERATOR IS.
  *
  * Hiding a route is NOT the security boundary — `admin-api` verifies the token and the `admin`
- * role on the request itself (`requireOperator`, admin-api/src/server.ts:496, which also refuses
+ * role on the request itself (`requireOperator`, admin-api/src/server.ts, which also refuses
  * a service token outright). This exists so that a signed-out operator is sent to sign in instead
  * of being shown a screen made entirely of 401s, and so that the console knows which principal it
  * is acting as.
@@ -15,7 +15,7 @@
  * admin-api/src/server.ts states this as the service's first rule). So this value is used for
  * exactly one thing: deciding what the UI may OFFER. The four-eyes control — the requester may
  * not be the approver — is enforced three times in `admin-api`
- * (admin-api/src/approvals.ts:5-20: the route, the UPDATE's WHERE clause, and a CHECK
+ * (admin-api/src/approvals.ts: the route, the UPDATE's WHERE clause, and a CHECK
  * constraint), and this console's job is to make it LEGIBLE rather than to enforce it. An
  * operator who is shown an Approve button that will answer 403 has been told something false
  * about what is possible.
@@ -26,8 +26,8 @@
  * ── The `/auth/me` shape, read correctly ──────────────────────────────────────────────────────
  *
  * Identity answers `{ user: {...}, session: {...}, organisations: [...] }` — the profile is
- * NESTED under `user` (`identity/src/server.ts:891-903`, with the body built by `toPublicUser` at
- * `identity/src/users.ts:52-63`). The web template and the four frontends cut from it declare
+ * NESTED under `user` (`identity/src/server.ts`, with the body built by `toPublicUser` at
+ * `identity/src/users.ts`). The web template and the four frontends cut from it declare
  * `interface Me { handle?, roles? }` and read those fields off the TOP level, where they do not
  * exist. The consequence is not cosmetic: `roles` is then always null, `isAdmin` in the company
  * bar is always false, and the switcher hides the three `adminOnly` entries — including this

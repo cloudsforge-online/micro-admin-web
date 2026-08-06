@@ -69,7 +69,7 @@ import {
  * This was pinned to 3002 while the registry disagreed with the service, with a note saying it
  * would fail the day the registry was corrected and that somebody should look at it then. That
  * day came: `micro-ui` now records devPort **4014**, the port `admin-api` actually binds
- * (`admin-api/src/env.ts:167`), and `surfaces.test.ts` pins that value against the service rather
+ * (`admin-api/src/env.ts`), and `surfaces.test.ts` pins that value against the service rather
  * than merely checking it collides with nothing — which is what let three wrong ports through.
  *
  * Still pinned to the registry rather than to a literal: this suite asserts what the CLIENT
@@ -122,7 +122,7 @@ function only(): { method: string; url: URL; body: unknown; headers: Record<stri
 
 /* ══════════════════════════════ reads ══════════════════════════════ */
 
-describe('GET /v1/estate — admin-api/src/server.ts:879', () => {
+describe('GET /v1/estate — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadEstate()
     const call = only()
@@ -141,7 +141,7 @@ describe('GET /v1/estate — admin-api/src/server.ts:879', () => {
     assert.equal(only().body, undefined)
   })
 
-  it('carries the operator’s bearer, because the route calls requireOperator (server.ts:881)', async () => {
+  it('carries the operator’s bearer, because the route calls requireOperator (server.ts)', async () => {
     await loadEstate()
     assert.equal(only().headers['authorization'], 'Bearer a1')
   })
@@ -154,7 +154,7 @@ describe('GET /v1/estate — admin-api/src/server.ts:879', () => {
   })
 })
 
-describe('GET /v1/actions — admin-api/src/server.ts:609', () => {
+describe('GET /v1/actions — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadActions()
     const call = only()
@@ -168,7 +168,7 @@ describe('GET /v1/actions — admin-api/src/server.ts:609', () => {
   })
 })
 
-describe('GET /v1/approvals — admin-api/src/server.ts:623', () => {
+describe('GET /v1/approvals — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadApprovals()
     const call = only()
@@ -181,22 +181,22 @@ describe('GET /v1/approvals — admin-api/src/server.ts:623', () => {
     assert.equal(only().url.search, '')
   })
 
-  it('sends state as `state`, the name the route reads at server.ts:627', async () => {
+  it('sends state as `state`, the name the route reads at server.ts', async () => {
     await loadApprovals({ state: 'pending' })
     assert.equal(only().url.searchParams.get('state'), 'pending')
   })
 
-  it('sends action as `action` — server.ts:630', async () => {
+  it('sends action as `action` — server.ts', async () => {
     await loadApprovals({ action: 'ledger.entry.reverse' })
     assert.equal(only().url.searchParams.get('action'), 'ledger.entry.reverse')
   })
 
-  it('sends requestedBy as `requestedBy` — server.ts:631', async () => {
+  it('sends requestedBy as `requestedBy` — server.ts', async () => {
     await loadApprovals({ requestedBy: 'user:abc' })
     assert.equal(only().url.searchParams.get('requestedBy'), 'user:abc')
   })
 
-  it('sends limit as a decimal string — server.ts:632, parsed by parseLimit at server.ts:1066', async () => {
+  it('sends limit as a decimal string — server.ts, parsed by parseLimit at server.ts', async () => {
     await loadApprovals({ limit: 25 })
     assert.equal(only().url.searchParams.get('limit'), '25')
   })
@@ -218,7 +218,7 @@ describe('GET /v1/approvals — admin-api/src/server.ts:623', () => {
   })
 })
 
-describe('GET /v1/approvals/:id — admin-api/src/server.ts:637', () => {
+describe('GET /v1/approvals/:id — admin-api/src/server.ts', () => {
   it('puts the id in the PATH, not the query', async () => {
     await loadApproval(APPROVAL_ID)
     const call = only()
@@ -230,12 +230,12 @@ describe('GET /v1/approvals/:id — admin-api/src/server.ts:637', () => {
   it('encodes the id, so a hostile one cannot escape its segment', async () => {
     await loadApproval('../flags')
     // `%2F` keeps it one segment. The service then answers 404 through `itemIdOf`
-    // (server.ts:1086), which is the correct answer for an id that is not a uuid.
+    // (server.ts), which is the correct answer for an id that is not a uuid.
     assert.match(only().url.pathname, /%2F/)
   })
 })
 
-describe('GET /v1/audit — admin-api/src/server.ts:557', () => {
+describe('GET /v1/audit — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadAudit()
     const call = only()
@@ -243,7 +243,7 @@ describe('GET /v1/audit — admin-api/src/server.ts:557', () => {
     assert.equal(call.url.pathname, '/v1/audit')
   })
 
-  it('sends every filter under the name the route reads — server.ts:563-570', async () => {
+  it('sends every filter under the name the route reads — server.ts', async () => {
     await loadAudit({
       actor: 'user:a',
       action: 'admin.approval.granted',
@@ -265,7 +265,7 @@ describe('GET /v1/audit — admin-api/src/server.ts:557', () => {
     assert.equal(q.get('limit'), '10')
   })
 
-  it('sends the cursor as `before`, a decimal sequence — parseCursor at server.ts:1061', async () => {
+  it('sends the cursor as `before`, a decimal sequence — parseCursor at server.ts', async () => {
     await loadAudit({ before: '1000' })
     assert.equal(only().url.searchParams.get('before'), '1000')
   })
@@ -284,7 +284,7 @@ describe('GET /v1/audit — admin-api/src/server.ts:557', () => {
   })
 })
 
-describe('GET /v1/audit/verify — admin-api/src/server.ts:579', () => {
+describe('GET /v1/audit/verify — admin-api/src/server.ts', () => {
   it('resumes from the checkpoint when no `from` is given', async () => {
     await verifyChain()
     const call = only()
@@ -293,12 +293,12 @@ describe('GET /v1/audit/verify — admin-api/src/server.ts:579', () => {
     assert.equal(call.url.search, '')
   })
 
-  it('sends from=0 to re-walk the whole chain — server.ts:582-584', async () => {
+  it('sends from=0 to re-walk the whole chain — server.ts', async () => {
     await verifyChain({ from: '0' })
     assert.equal(only().url.searchParams.get('from'), '0')
   })
 
-  it('sends a limit when one is asked for — server.ts:588', async () => {
+  it('sends a limit when one is asked for — server.ts', async () => {
     await verifyChain({ from: '0', limit: 200000 })
     assert.equal(only().url.searchParams.get('limit'), '200000')
   })
@@ -310,7 +310,7 @@ describe('GET /v1/audit/verify — admin-api/src/server.ts:579', () => {
   })
 })
 
-describe('GET /v1/flags — admin-api/src/server.ts:774', () => {
+describe('GET /v1/flags — admin-api/src/server.ts', () => {
   it('is a GET at the exact path with no query', async () => {
     await loadFlags()
     const call = only()
@@ -320,13 +320,13 @@ describe('GET /v1/flags — admin-api/src/server.ts:774', () => {
   })
 })
 
-describe('GET /v1/broadcasts — admin-api/src/server.ts:811', () => {
+describe('GET /v1/broadcasts — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadBroadcasts()
     assert.equal(only().url.pathname, '/v1/broadcasts')
   })
 
-  it('sends live=true as the literal string the route compares against (server.ts:814)', async () => {
+  it('sends live=true as the literal string the route compares against (server.ts)', async () => {
     await loadBroadcasts({ live: true })
     assert.equal(only().url.searchParams.get('live'), 'true')
   })
@@ -346,7 +346,7 @@ describe('GET /v1/broadcasts — admin-api/src/server.ts:811', () => {
 
 /* ══════════════════════════════ writes ══════════════════════════════ */
 
-describe('POST /v1/approvals — admin-api/src/server.ts:645', () => {
+describe('POST /v1/approvals — admin-api/src/server.ts', () => {
   const input = {
     action: 'ledger.entry.reverse',
     subjectId: 'entry-1',
@@ -373,7 +373,7 @@ describe('POST /v1/approvals — admin-api/src/server.ts:645', () => {
     })
   })
 
-  it('sends the Idempotency-Key header — required at server.ts:988, 400 without it', async () => {
+  it('sends the Idempotency-Key header — required at server.ts, 400 without it', async () => {
     await requestApproval(input, KEY)
     assert.equal(only().headers['idempotency-key'], KEY)
   })
@@ -393,21 +393,21 @@ describe('POST /v1/approvals — admin-api/src/server.ts:645', () => {
     assert.equal(body['userId'], undefined)
   })
 
-  it('sends params as an object, which the route requires (server.ts:666)', async () => {
+  it('sends params as an object, which the route requires (server.ts)', async () => {
     await requestApproval({ ...input, params: { description: 'x', refund: true } }, KEY)
     const body = only().body as { params: Record<string, unknown> }
     assert.equal(typeof body.params, 'object')
     assert.equal(body.params['refund'], true)
   })
 
-  it('sends a boolean param as a boolean, which server.ts:670 accepts alongside a string', async () => {
+  it('sends a boolean param as a boolean, which server.ts accepts alongside a string', async () => {
     await requestApproval({ ...input, params: { refund: false } }, KEY)
     const body = only().body as { params: Record<string, unknown> }
     assert.equal(body.params['refund'], false)
   })
 })
 
-describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts:709', () => {
+describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts', () => {
   it('is a POST at the exact path with the id in the path', async () => {
     await decideApproval(APPROVAL_ID, { grant: true }, KEY)
     const call = only()
@@ -415,7 +415,7 @@ describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts:709', () =
     assert.equal(call.url.pathname, `/v1/approvals/${APPROVAL_ID}/decision`)
   })
 
-  it('sends grant as a BOOLEAN — server.ts:715 answers 400 for anything else', async () => {
+  it('sends grant as a BOOLEAN — server.ts answers 400 for anything else', async () => {
     await decideApproval(APPROVAL_ID, { grant: true }, KEY)
     const body = only().body as Record<string, unknown>
     assert.equal(body['grant'], true)
@@ -431,7 +431,7 @@ describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts:709', () =
     assert.equal((call.body as Record<string, unknown>)['grant'], false)
   })
 
-  it('sends the note when there is one — read at server.ts:731', async () => {
+  it('sends the note when there is one — read at server.ts', async () => {
     await decideApproval(APPROVAL_ID, { grant: true, note: 'checked against the journal' }, KEY)
     assert.equal((only().body as Record<string, unknown>)['note'], 'checked against the journal')
   })
@@ -441,7 +441,7 @@ describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts:709', () =
     assert.equal('note' in (only().body as object), false)
   })
 
-  it('sends the Idempotency-Key — server.ts:718', async () => {
+  it('sends the Idempotency-Key — server.ts', async () => {
     await decideApproval(APPROVAL_ID, { grant: true }, KEY)
     assert.equal(only().headers['idempotency-key'], KEY)
   })
@@ -455,7 +455,7 @@ describe('POST /v1/approvals/:id/decision — admin-api/src/server.ts:709', () =
   })
 })
 
-describe('PUT /v1/flags/:key — admin-api/src/server.ts:780', () => {
+describe('PUT /v1/flags/:key — admin-api/src/server.ts', () => {
   it('is a PUT with the key in the path', async () => {
     await setFlag('new-checkout', { enabled: true, description: 'd', owner: 'payments' })
     const call = only()
@@ -463,14 +463,14 @@ describe('PUT /v1/flags/:key — admin-api/src/server.ts:780', () => {
     assert.equal(call.url.pathname, '/v1/flags/new-checkout')
   })
 
-  it('sends enabled as a BOOLEAN — server.ts:785 answers 400 otherwise', async () => {
+  it('sends enabled as a BOOLEAN — server.ts answers 400 otherwise', async () => {
     await setFlag('k', { enabled: false, description: 'd', owner: 'o' })
     const body = only().body as Record<string, unknown>
     assert.equal(body['enabled'], false)
     assert.equal(typeof body['enabled'], 'boolean')
   })
 
-  it('sends description and owner, both required (server.ts:793-794, flags.ts:99-104)', async () => {
+  it('sends description and owner, both required (server.ts, flags.ts)', async () => {
     await setFlag('k', { enabled: true, description: 'why it exists', owner: 'payments' })
     assert.deepEqual(only().body, {
       enabled: true,
@@ -480,7 +480,7 @@ describe('PUT /v1/flags/:key — admin-api/src/server.ts:780', () => {
   })
 
   it('sends NO Idempotency-Key: the route is exempt, and the exemption is recorded', async () => {
-    // routeidempotency.test.ts:35-37 in admin-api. An upsert keyed on the flag key; a retry
+    // routeidempotency.test.ts in admin-api. An upsert keyed on the flag key; a retry
     // writes the same row, and the audit records before and after. Sending a key would be a claim
     // about the route that is not true.
     await setFlag('k', { enabled: true, description: 'd', owner: 'o' })
@@ -493,7 +493,7 @@ describe('PUT /v1/flags/:key — admin-api/src/server.ts:780', () => {
   })
 })
 
-describe('POST /v1/broadcasts — admin-api/src/server.ts:827', () => {
+describe('POST /v1/broadcasts — admin-api/src/server.ts', () => {
   it('is a POST at the exact path', async () => {
     await publishBroadcast({ severity: 'incident', title: 't', body: 'b' }, KEY)
     const call = only()
@@ -501,7 +501,7 @@ describe('POST /v1/broadcasts — admin-api/src/server.ts:827', () => {
     assert.equal(call.url.pathname, '/v1/broadcasts')
   })
 
-  it('sends severity, title and body — all required at server.ts:842-844', async () => {
+  it('sends severity, title and body — all required at server.ts', async () => {
     await publishBroadcast({ severity: 'maintenance', title: 'Down', body: 'Back at 03:00' }, KEY)
     assert.deepEqual(only().body, {
       severity: 'maintenance',
@@ -510,7 +510,7 @@ describe('POST /v1/broadcasts — admin-api/src/server.ts:827', () => {
     })
   })
 
-  it('sends startsAt and endsAt only when given — optional at server.ts:845-846', async () => {
+  it('sends startsAt and endsAt only when given — optional at server.ts', async () => {
     await publishBroadcast(
       { severity: 'info', title: 't', body: 'b', startsAt: '2026-08-01T00:00:00.000Z' },
       KEY,
@@ -520,13 +520,13 @@ describe('POST /v1/broadcasts — admin-api/src/server.ts:827', () => {
     assert.equal('endsAt' in body, false)
   })
 
-  it('sends the Idempotency-Key — server.ts:832, so a retry does not publish twice', async () => {
+  it('sends the Idempotency-Key — server.ts, so a retry does not publish twice', async () => {
     await publishBroadcast({ severity: 'info', title: 't', body: 'b' }, KEY)
     assert.equal(only().headers['idempotency-key'], KEY)
   })
 })
 
-describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts:864', () => {
+describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts', () => {
   it('is a DELETE with the id in the path and no body', async () => {
     await retractBroadcast(BROADCAST_ID)
     const call = only()
@@ -536,7 +536,7 @@ describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts:864', () => {
   })
 
   it('sends NO Idempotency-Key: exempt, and for a different reason from the flag route', async () => {
-    // routeidempotency.test.ts:37-38 — a state transition claimed with `where retracted_at is
+    // routeidempotency.test.ts — a state transition claimed with `where retracted_at is
     // null`; a second attempt matches no row and is refused rather than audited twice.
     await retractBroadcast(BROADCAST_ID)
     assert.equal(only().headers['idempotency-key'], undefined)
@@ -564,7 +564,7 @@ describe('DELETE /v1/broadcasts/:id — admin-api/src/server.ts:864', () => {
  * service lands, the comparison is a diff rather than an investigation.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
-describe('GET /v1/backups — admin-api/src/server.ts:1332', () => {
+describe('GET /v1/backups — admin-api/src/server.ts', () => {
   it('is a GET at the exact path', async () => {
     await loadBackups()
     const call = only()
@@ -589,7 +589,7 @@ describe('GET /v1/backups — admin-api/src/server.ts:1332', () => {
   })
 })
 
-describe('GET /v1/backups/:id — admin-api/src/server.ts:1445', () => {
+describe('GET /v1/backups/:id — admin-api/src/server.ts', () => {
   it('puts the id in the path and encodes it', async () => {
     await loadBackup(BACKUP_ID)
     assert.equal(only().url.pathname, `/v1/backups/${BACKUP_ID}`)
@@ -599,7 +599,7 @@ describe('GET /v1/backups/:id — admin-api/src/server.ts:1445', () => {
   })
 })
 
-describe('GET /v1/backups/settings — admin-api/src/server.ts:1359', () => {
+describe('GET /v1/backups/settings — admin-api/src/server.ts', () => {
   it('is a GET at the settings path, which is NOT the id path', async () => {
     // `settings` occupies the `:id` slot. The two are separate declarations in ADMIN_ROUTES for
     // that reason, and this asserts the client sends the literal rather than something that would
@@ -611,7 +611,7 @@ describe('GET /v1/backups/settings — admin-api/src/server.ts:1359', () => {
   })
 })
 
-describe('PUT /v1/backups/settings — admin-api/src/server.ts:1387', () => {
+describe('PUT /v1/backups/settings — admin-api/src/server.ts', () => {
   const INPUT = {
     rootPath: '/var/backups/cloudsforge',
     retentionCopies: 7,
@@ -644,7 +644,7 @@ describe('PUT /v1/backups/settings — admin-api/src/server.ts:1387', () => {
   })
 })
 
-describe('POST /v1/backups — admin-api/src/server.ts:1473', () => {
+describe('POST /v1/backups — admin-api/src/server.ts', () => {
   it('is a POST carrying the kind and the reason', async () => {
     await startBackup({ kind: 'full', reason: 'before the ledger migration' }, KEY)
     const call = only()
@@ -669,7 +669,7 @@ describe('POST /v1/backups — admin-api/src/server.ts:1473', () => {
   })
 })
 
-describe('GET /v1/restores — admin-api/src/server.ts:1520', () => {
+describe('GET /v1/restores — admin-api/src/server.ts', () => {
   it('is a GET at the exact path, with limit only when asked', async () => {
     await loadRestores()
     assert.equal(only().url.pathname, '/v1/restores')
@@ -680,7 +680,7 @@ describe('GET /v1/restores — admin-api/src/server.ts:1520', () => {
   })
 })
 
-describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY ONLY', () => {
+describe('POST /v1/restores — admin-api/src/server.ts, and it is VERIFY ONLY', () => {
   const BASE = { backupRunId: BACKUP_ID, targets: ['ledger', 'identity'], reason: 'quarterly drill' }
 
   it('is a POST carrying the backup, the targets and the reason, with mode fixed to verify', async () => {
@@ -698,7 +698,7 @@ describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY O
 
   it('sends NO confirmation and NO approvalId, because this route takes neither', async () => {
     // The route hard-codes `mode: 'verify'` on the insert and passes `approvalId: null` and
-    // `confirmation: null` (server.ts:1578-1586), with a comment naming the schema constraint that
+    // `confirmation: null` (server.ts), with a comment naming the schema constraint that
     // refuses a verify row carrying an approval. A client sending either would be describing a
     // route that does not exist.
     await startVerifyRestore(BASE, KEY)
@@ -709,7 +709,7 @@ describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY O
 
   it('offers no way to ask THIS route for a live restore', () => {
     // An ABSENCE, so it is written down and checked — the same reason POST /v1/events is. The route
-    // answers 400 for `mode: "live"` (server.ts:1552), so a `startLiveRestore` here would be an
+    // answers 400 for `mode: "live"` (server.ts), so a `startLiveRestore` here would be an
     // error with a confirmation ritual in front of it. This is the assertion that would have caught
     // the drift: the first version of this client had exactly that function.
     assert.doesNotMatch(CLIENT_SOURCE, /export function startLiveRestore\b/)
@@ -717,7 +717,7 @@ describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY O
     assert.match(CLIENT_SOURCE, /mode: 'verify'/)
   })
 
-  it('carries the Idempotency-Key the route requires (server.ts:1568)', async () => {
+  it('carries the Idempotency-Key the route requires (server.ts)', async () => {
     await startVerifyRestore(BASE, KEY)
     assert.equal(only().headers['idempotency-key'], KEY)
   })
@@ -734,7 +734,7 @@ describe('POST /v1/restores — admin-api/src/server.ts:1546, and it is VERIFY O
 
 describe('a live restore goes through the approval queue, not through /v1/restores', () => {
   it('raises estate.restore against the BACKUP RUN, carrying the phrase as a param', async () => {
-    // admin-api/src/actions.ts:346 — subjectKind `backup_run`, requiredParams ['confirmation'] —
+    // admin-api/src/actions.ts — subjectKind `backup_run`, requiredParams ['confirmation'] —
     // and the executor reads `ctx.approval.subjectId` as the backup to restore from. A wrong
     // subject here would have two operators authorise a restore of a different backup than the one
     // that was on screen.
@@ -758,7 +758,7 @@ describe('a live restore goes through the approval queue, not through /v1/restor
     assert.equal(body['subjectId'], BACKUP_ID)
     const params = body['params'] as Record<string, unknown>
     // The phrase goes over the wire byte for byte: `requestRestore` compares it with `!==` at
-    // execution time (admin-api/src/backups.ts:645), so a client that trimmed, lowercased or
+    // execution time (admin-api/src/backups.ts), so a client that trimmed, lowercased or
     // re-rendered the timestamp would refuse every live restore in the estate.
     assert.equal(params['confirmation'], 'restore mainnet from 2026-08-04T12:00:00Z')
     // A LIST, not a comma-joined string: the executor reads it with `Array.isArray` and an absent
@@ -778,22 +778,35 @@ describe('the set of routes this bundle can reach', () => {
     assert.equal(Object.keys(ADMIN_ROUTES).length, 23)
   })
 
-  it('cites a line number in admin-api/src/server.ts for every one of them', () => {
-    // ── THIS BRIEFLY ACCEPTED A CONTRACT SENTENCE INSTEAD OF A LINE, AND NO LONGER DOES ──────
+  it('names a method and a path for every one of them, and no line number', () => {
+    // ── THIS REQUIRED A LINE NUMBER, AND THAT IS WHAT IT NOW FORBIDS ─────────────────────────
     //
-    // The backup module was being built in parallel with the client, so for a while those seven
-    // routes had genuinely nothing to cite — and an uncited route was then indistinguishable from
-    // one somebody had forgotten to cite, so the rule was widened to "a line OR the contract it was
-    // agreed against, and the contract has to name its own path".
+    // It briefly accepted a contract sentence instead, because the backup module was being built
+    // in parallel with the client and those seven routes had genuinely nothing to cite. The module
+    // landed, the seven were re-read against it, four differences were found and fixed, and the
+    // escape hatch went with them.
     //
-    // The module landed. The seven were re-read against it, four differences were found and fixed,
-    // and the escape hatch is gone with them. A rule written for a situation that has ended is a
-    // rule the next uncited route hides behind.
+    // The LINE went too, and for a stronger reason than the escape hatch. It named a position in
+    // `admin-api/src/server.ts`, a file this repository does not own and does not watch: when the
+    // engagement routes landed, every one of the twenty-three below shifted and had to be
+    // corrected by hand for an edit that changed nothing this bundle calls. Nothing runs this
+    // suite when admin-api changes, so a stale citation surfaces at a release — and a drifted
+    // citation still resolves, so it reads as verified while naming a different route.
+    //
+    // The method and the path are what this client depends on, and the two tests below check them
+    // in both directions: every declared route is exercised, and every path requested is declared.
     for (const [path, route] of Object.entries(ADMIN_ROUTES)) {
-      assert.ok(route.line !== null && route.line > 0, `${path} cites no line`)
       assert.equal(route.contract, undefined, `${path} still carries a contract sentence`)
       assert.match(route.method, /^(GET|POST|PUT|DELETE)$/, `${path} has no method`)
+      assert.doesNotMatch(path, /:\d+/, `${path} has grown a line number; cite the file or the route`)
     }
+    // …and the file the surface was read from is still named, so a reader knows where to look.
+    assert.match(SOURCE, /admin-api\/src\/server\.ts/)
+    assert.doesNotMatch(
+      SOURCE,
+      /admin-api\/src\/server\.ts:\d+/,
+      'src/lib/admin.ts has grown a line number again; cite the file and the route',
+    )
   })
 
 

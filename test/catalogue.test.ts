@@ -1,7 +1,7 @@
 /**
  * §3.3g: an action with no executor must not look like one that can be executed.
  *
- * The rule these tests exist to hold, from `admin-api/src/server.ts:657-659`: a queue that accepts
+ * The rule these tests exist to hold, from `admin-api/src/server.ts`: a queue that accepts
  * work it cannot do lies to the operator waiting on it, and leaves a row at `approved` for ever —
  * which reads in the audit as two operators having authorised something that never happened.
  *
@@ -24,13 +24,13 @@ import {
   readCatalogue,
 } from '../src/lib/catalogue.ts'
 
-/** The executable entry, as `GET /v1/actions` serves it (admin-api/src/actions.ts:102-109). */
+/** The executable entry, as `GET /v1/actions` serves it (admin-api/src/actions.ts). */
 const REVERSE: ActionSpec = {
   name: 'ledger.entry.reverse',
   subjectKind: 'ledger_entry',
   upstream: 'ledger',
   summary: 'Reverse a ledger entry with a new balanced journal entry. Never an UPDATE (AD-06).',
-  route: 'POST /entries/:id/reverse — ledger/src/server.ts:394, scope ledger:post',
+  route: 'POST /entries/:id/reverse — ledger/src/server.ts, scope ledger:post',
   blockedReason: null,
   requiredParams: ['description'],
 }
@@ -40,12 +40,12 @@ const RESOLVE: ActionSpec = {
   subjectKind: 'moderation_case',
   upstream: 'market',
   summary: 'Uphold or dismiss a marketplace moderation case.',
-  route: 'POST /v1/moderation/cases/:id/resolve — market/src/server.ts:1086, market:admin or role:admin',
+  route: 'POST /v1/moderation/cases/:id/resolve — market/src/server.ts, market:admin or role:admin',
   blockedReason: null,
   requiredParams: ['state'],
 }
 
-/** The §3.3g entry (admin-api/src/actions.ts:126-139), reproduced field for field. */
+/** The §3.3g entry (admin-api/src/actions.ts), reproduced field for field. */
 const ROLE_GRANT: ActionSpec = {
   name: 'identity.role.grant',
   subjectKind: 'user',
@@ -54,7 +54,7 @@ const ROLE_GRANT: ActionSpec = {
   route: null,
   blockedReason:
     'identity has no route that assigns users.roles. All 36 of its route definitions were ' +
-    'enumerated: POST /auth/register hard-codes [\'player\'] (identity/src/users.ts:104-106) and ' +
+    'enumerated: POST /auth/register hard-codes [\'player\'] (identity/src/users.ts) and ' +
     'POST /organisations/:id/memberships grants an organisation role, which SD-03 states is not ' +
     'a platform role. This service will not write to identity\'s database to work around it — ' +
     'rule 1, one database per service, checked in CI. It needs ' +
@@ -74,7 +74,7 @@ describe('availability turns on the route, and only on the route', () => {
   })
 
   it('a null upstream does not by itself block: the ROUTE is the predicate', () => {
-    // Same predicate the service uses at server.ts:660. A console that keyed off `upstream` would
+    // Same predicate the service uses at server.ts. A console that keyed off `upstream` would
     // disagree with `admin-api` the moment a catalogue entry named a route on a fourth upstream.
     assert.equal(availabilityOf({ ...REVERSE, upstream: null }), 'executable')
   })
@@ -83,7 +83,7 @@ describe('availability turns on the route, and only on the route', () => {
     // The day identity grows the route, `identity.role.grant` becomes requestable with no change
     // here. An allowlist in this repository would be a copy of the catalogue that goes stale.
     assert.equal(
-      availabilityOf({ ...ROLE_GRANT, route: 'PUT /internal/users/:id/roles — identity/src/server.ts:1300' }),
+      availabilityOf({ ...ROLE_GRANT, route: 'PUT /internal/users/:id/roles — identity/src/server.ts' }),
       'executable',
     )
   })
@@ -166,7 +166,7 @@ describe('no control may send the request for a blocked action', () => {
 
   it('refuses for an action that is not in the catalogue at all', () => {
     // A form rendered for an unknown action would send a request the service answers 400 for,
-    // naming the legal set (server.ts:651-655).
+    // naming the legal set (server.ts).
     assert.equal(mayRequest(undefined), false)
   })
 })
@@ -189,7 +189,7 @@ describe('the 501, when a catalogue read is out of date', () => {
   })
 
   it('does not mistake a 400 for it', () => {
-    // server.ts:326-329 distinguishes them on purpose: a 400 means fix the request, a 501 means
+    // server.ts distinguishes them on purpose: a 400 means fix the request, a 501 means
     // the estate is missing a route and the response names it.
     assert.equal(isNoUpstream({ status: 400, code: 'bad_request' }), false)
   })
@@ -209,13 +209,13 @@ describe('required parameters, checked before the request is sent', () => {
   })
 
   it('rejects a whitespace-only string, which the service would accept', () => {
-    // Stricter than server.ts:670 on purpose: a blank description on a ledger reversal would be
+    // Stricter than server.ts on purpose: a blank description on a ledger reversal would be
     // accepted by the route and useless to whoever reads the journal in six months. Being
     // stricter than the service is safe; being looser offers a request the service refuses.
     assert.deepEqual(missingParams(REVERSE, { description: '   ' }), ['description'])
   })
 
-  it('accepts `false` as a value, because server.ts:670 accepts a boolean', () => {
+  it('accepts `false` as a value, because server.ts accepts a boolean', () => {
     const spec = { ...REVERSE, requiredParams: ['refund'] }
     assert.deepEqual(missingParams(spec, { refund: false }), [])
   })

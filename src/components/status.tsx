@@ -103,7 +103,7 @@ export function LifecycleRail({ status }: { status: MarketStatus }) {
  * Everywhere else in this console, an action appends a hash-chained `audit_events` row through
  * `admin-api` and `AuditRecordPreview` shows it. The five market actions do not: they write
  * `market_transitions` and an outbox event inside `micro-foresight`
- * (`recordTransition`, foresight/src/markets.ts:336-349; topics at foresight/src/outbox.ts:66-70).
+ * (`recordTransition`, foresight/src/markets.ts; topics at foresight/src/outbox.ts).
  *
  * An operator who has learnt that "the block above the button is the audit row" would otherwise
  * read the ABSENCE of that block as "this action is not recorded", which is false, or its presence

@@ -3,7 +3,7 @@
  *
  * ── Why the state table is restated here ──────────────────────────────────────────────────────
  *
- * `foresight/src/markets.ts:49-61` is the authority and this is a MIRROR of it, character for
+ * `foresight/src/markets.ts` is the authority and this is a MIRROR of it, character for
  * character, with the citation above each row. A mirror rather than an import because foresight
  * publishes no package, and a mirror rather than nothing because an operator console that offers
  * a button the service will refuse has told the operator something false about what is possible.
@@ -14,7 +14,7 @@
  *
  * There is no close action, because there is no close route. A market closes when its close time
  * passes: the contract stops taking stakes on its own and the `market.close` leased job writes
- * the registry to match (`marketCloseHandler`, foresight/src/jobs.ts:277-290). Offering an
+ * the registry to match (`marketCloseHandler`, foresight/src/jobs.ts). Offering an
  * operator a "Close" button here would be inventing a route — the exact defect class this estate
  * has already paid for twice — and it would also be a lie about who closes a market.
  *
@@ -30,10 +30,10 @@ import type { Market, MarketStatus } from './foresight.ts'
 /* ══════════════════════════════ the state table ══════════════════════════════ */
 
 /**
- * The permitted transitions. Mirrors `TRANSITIONS`, foresight/src/markets.ts:49-61.
+ * The permitted transitions. Mirrors `TRANSITIONS`, foresight/src/markets.ts.
  *
  * `resolved → void` is not an oddity: it is the dispute window doing its job. The outcome is
- * posted, somebody shows it is wrong, and the money has not moved yet (markets.ts:55-56).
+ * posted, somebody shows it is wrong, and the money has not moved yet (markets.ts).
  */
 export const TRANSITIONS: Readonly<Record<MarketStatus, readonly MarketStatus[]>> = Object.freeze({
   draft: Object.freeze<MarketStatus[]>(['approved', 'void']),
@@ -66,9 +66,9 @@ export const LIFECYCLE_ORDER: readonly MarketStatus[] = [
 /**
  * **0 is YES. 1 is NO.**
  *
- * `planResolution` maps outcome 0 to `ACTION_RESOLVE_YES` (foresight/src/resolve.ts:283, with the
- * constants at resolve.ts:55-57), and the mirror sums `outcome = 0` into the `yes` pool
- * (mirror.ts:281-282). It reads backwards to anyone who expects 0 to be false, which is exactly
+ * `planResolution` maps outcome 0 to `ACTION_RESOLVE_YES` (foresight/src/resolve.ts, with the
+ * constants at resolve.ts), and the mirror sums `outcome = 0` into the `yes` pool
+ * (mirror.ts). It reads backwards to anyone who expects 0 to be false, which is exactly
  * why it is a named constant here and never a literal at a call site.
  */
 export const OUTCOME_YES = 0
@@ -80,7 +80,7 @@ export function outcomeLabel(outcome: number | null): string | null {
   return null
 }
 
-/** The resolution `action` the service planned. resolve.ts:55-57. */
+/** The resolution `action` the service planned. resolve.ts. */
 export const ACTION_RESOLVE_YES = 0
 export const ACTION_RESOLVE_NO = 1
 export const ACTION_VOID = 2
@@ -89,7 +89,7 @@ export const ACTION_VOID = 2
  * What the service actually decided to do, which may not be what was asked.
  *
  * `planResolution` turns a resolve into a void when the market's named source is unreachable
- * (resolve.ts:282-288). Reading this back from the response — rather than assuming the requested
+ * (resolve.ts). Reading this back from the response — rather than assuming the requested
  * outcome — is the whole reason the acceptance is rendered instead of dismissed.
  */
 export function actionLabel(action: number): string {
@@ -134,9 +134,9 @@ export interface LifecycleAction {
    *
    *   * `market_transitions` — one row per state change, with the from-status, the to-status, the
    *     `operator:<userId>` actor, a reason and the correlation id (`recordTransition`,
-   *     foresight/src/markets.ts:336-349).
+   *     foresight/src/markets.ts).
    *   * an outbox event — `foresight.market.opened` / `.closed` / `.resolved` / `.voided` /
-   *     `.settled` (foresight/src/outbox.ts:66-70), emitted in the same transaction.
+   *     `.settled` (foresight/src/outbox.ts), emitted in the same transaction.
    *
    * Showing the admin audit block over these would tell an operator they were signing for a row in
    * a chain that will not contain it — and a console that is wrong about where the record lives is
@@ -171,8 +171,8 @@ export function actionsFor(market: Market): readonly LifecycleAction[] {
         ? null
         : `a market is approved from draft; this one is ${market.status}`,
       records: [
-        'A `market_transitions` row: draft → approved, with you as `operator:<your uuid>` (markets.ts:336-349).',
-        '`approved_by` and `approved_at` on the market itself. The `operator:` prefix is checked here and again by `markets_unapproved_never_opens`, which is why an approval cannot be forged by a service token (markets.ts:354-355, and `approved_by` is written at markets.ts:381).',
+        'A `market_transitions` row: draft → approved, with you as `operator:<your uuid>` (markets.ts).',
+        '`approved_by` and `approved_at` on the market itself. The `operator:` prefix is checked here and again by `markets_unapproved_never_opens`, which is why an approval cannot be forged by a service token (markets.ts, and `approved_by` is written at markets.ts).',
         'No outbox event and no admin-api audit row. Approving is a decision, not yet a change anyone outside can see.',
       ],
     },
@@ -193,7 +193,7 @@ export function actionsFor(market: Market): readonly LifecycleAction[] {
             ? 'this market already has a contract'
             : null,
       records: [
-        'An idempotency row keyed on `POST /markets/:id/deploy` plus your key, so a retry with the same key replays the acceptance instead of building a second contract (`withIdempotency`, server.ts:868-882).',
+        'An idempotency row keyed on `POST /markets/:id/deploy` plus your key, so a retry with the same key replays the acceptance instead of building a second contract (`withIdempotency`, server.ts).',
         'A queued `market.deploy` job. The contract address, when it lands, is written by that job and not by this request.',
       ],
     },
@@ -213,8 +213,8 @@ export function actionsFor(market: Market): readonly LifecycleAction[] {
           ? 'the market contract is not deployed yet'
           : null,
       records: [
-        'A `market_transitions` row: approved → open, with you as the actor (markets.ts:336-349).',
-        'A `foresight.market.opened` outbox event carrying the market’s public view, emitted in the same transaction as the status change (markets.ts:425-431, outbox.ts:66).',
+        'A `market_transitions` row: approved → open, with you as the actor (markets.ts).',
+        'A `foresight.market.opened` outbox event carrying the market’s public view, emitted in the same transaction as the status change (markets.ts, outbox.ts).',
       ],
     },
     {
@@ -231,8 +231,8 @@ export function actionsFor(market: Market): readonly LifecycleAction[] {
         ? null
         : `a market is resolved after it closes; this one is ${market.status}`,
       records: [
-        'A `resolutions` row holding the action the service PLANNED — which is not always the one you asked for — its rationale and its state (resolve.ts:282-288).',
-        'Later, when the chain accepts it: a `market_transitions` row closed → resolved carrying `outcome=<0|1>`, and a `foresight.market.resolved` event (markets.ts:508-516, outbox.ts:68).',
+        'A `resolutions` row holding the action the service PLANNED — which is not always the one you asked for — its rationale and its state (resolve.ts).',
+        'Later, when the chain accepts it: a `market_transitions` row closed → resolved carrying `outcome=<0|1>`, and a `foresight.market.resolved` event (markets.ts, outbox.ts).',
         'Your rationale is stored verbatim and is what anyone disputing this outcome will read.',
       ],
     },
@@ -252,8 +252,8 @@ export function actionsFor(market: Market): readonly LifecycleAction[] {
           ? 'this market has a contract — void it through the oracle on the resolve path, so the chain and the registry agree'
           : null,
       records: [
-        'A `market_transitions` row: <current> → void, with you as the actor and the reason you write (markets.ts:336-349).',
-        'A `foresight.market.voided` outbox event (markets.ts:582-588, outbox.ts:69).',
+        'A `market_transitions` row: <current> → void, with you as the actor and the reason you write (markets.ts).',
+        'A `foresight.market.voided` outbox event (markets.ts, outbox.ts).',
         'The reason is stored on the market and shown publicly. It is not an internal note.',
       ],
     },

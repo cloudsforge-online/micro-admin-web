@@ -1,8 +1,8 @@
 /**
  * The audit log, and the verification of the chain it lives in.
  *
- * `GET /v1/audit` — **admin-api/src/server.ts:557**, filters read at server.ts:563-570.
- * `GET /v1/audit/verify` — **admin-api/src/server.ts:579**.
+ * `GET /v1/audit` — **admin-api/src/server.ts**, filters read at server.ts.
+ * `GET /v1/audit/verify` — **admin-api/src/server.ts**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * WHAT "TAMPER-EVIDENT" MEANS HERE, SAID ON THE PAGE RATHER THAN ASSUMED.
@@ -288,10 +288,10 @@ function AuditRow({
  *
  * Two buttons, labelled by what they MEAN rather than by the parameter they set: the nightly job
  * resumes from the last checkpoint, and an operator investigating a suspected tamper asks for
- * everything (`from=0` re-walks the whole chain, server.ts:582-584 — a parameter rather than the
+ * everything (`from=0` re-walks the whole chain, server.ts — a parameter rather than the
  * default because of cost, not doubt).
  *
- * `GET /v1/audit/verify` answers **200 whether or not the chain verifies** (server.ts:591-592):
+ * `GET /v1/audit/verify` answers **200 whether or not the chain verifies** (server.ts):
  * the caller asked a question and this is the answer, and a 500 would deny a monitoring system
  * the fact it exists to read. So `ok: false` renders as a FINDING, never as a failed request.
  */

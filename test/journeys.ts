@@ -74,7 +74,7 @@ export const SCENARIOS: readonly Scenario[] = [
     tier: 'T1',
     unblocks: {
       was: '§8.4 — "no support-lookup screen (§8.4)". admin-web had eight routes and none was this.',
-      by: 'src/pages/support.tsx, routed at src/app.tsx:89.',
+      by: 'src/pages/support.tsx, routed at src/app.tsx.',
     },
     caveat:
       'Doc 22’s row ends "every read carries an audit record and a reason code". That is a property ' +
@@ -94,8 +94,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Claim 9’s evidence is an operator answering "where did this user’s money go" — and the ' +
       'answer requires rows from ledger, wallet and settlement, none of which reach this database. ' +
       '`admin-api`’s intake is built and properly guarded, but the topic it consumes, ' +
-      '`*.audit.recorded` (`admin-api/src/server.ts:132`), has no producer anywhere in the estate; ' +
-      '`admin-api/README.md:367-368` records the same finding as gap 2. So the cross-service ' +
+      '`*.audit.recorded` (`admin-api/src/server.ts`), has no producer anywhere in the estate; ' +
+      '`admin-api/README.md` records the same finding as gap 2. So the cross-service ' +
       'journey cannot be run at any tier until a producer exists, and asserting it here would be ' +
       'this console certifying itself. BJ-SUP-01..04 assert the thing that IS in this repository’s ' +
       'gift: that the screen says so rather than looking complete.',

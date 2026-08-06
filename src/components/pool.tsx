@@ -4,7 +4,7 @@
  * ── The chart is drawn from basis points, never from a ratio computed here ────────────────────
  *
  * `yesBps` and `noBps` are exact integers the service derived in bigint before narrowing
- * (foresight/src/mirror.ts:304-307: "the division happens before the conversion and the result is
+ * (foresight/src/mirror.ts: "the division happens before the conversion and the result is
  * under 10,000"). Dividing `yes` by `total` in this bundle would put an 18-decimal number through
  * a double to draw a bar, and would then disagree with the figure printed beside it.
  *
@@ -83,7 +83,7 @@ export function PoolPanel({ pool, title = 'The pool' }: { pool: Pool; title?: st
  *
  * Three sentences, and which one appears is decided by the service's own `stale` flag rather than
  * by a threshold reinvented here — the service knows the chain's confirmation depth and this
- * bundle does not (mirror.ts:313-315).
+ * bundle does not (mirror.ts).
  */
 export function PoolFreshness({ pool }: { pool: Pool }) {
   const behind = behindLabel(pool.behindBlocks)

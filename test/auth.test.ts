@@ -5,8 +5,8 @@
  * THE DEFECT THIS FILE EXISTS TO STOP BEING INHERITED.
  *
  * Identity answers `{ user: {...}, session: {...}, organisations: [...] }` — the profile is NESTED
- * under `user` (`identity/src/server.ts:891-903`, body built by `toPublicUser` at
- * `identity/src/users.ts:52-63`). `micro-web-template` and the four frontends cut from it declare
+ * under `user` (`identity/src/server.ts`, body built by `toPublicUser` at
+ * `identity/src/users.ts`). `micro-web-template` and the four frontends cut from it declare
  * `interface Me { handle?, roles? }` and read those fields off the TOP level, where they are not.
  *
  * The consequence is not cosmetic. `roles` is then always null, so `isAdmin` in the company bar is
@@ -134,7 +134,7 @@ describe('what it does when it cannot tell', () => {
 
 describe('the role name', () => {
   it('is the one admin-api requires', () => {
-    // `requireOperator` at admin-api/src/server.ts:496 calls `isAdmin`, which reads `role:admin`.
+    // `requireOperator` at admin-api/src/server.ts calls `isAdmin`, which reads `role:admin`.
     assert.equal(OPERATOR_ROLE, 'admin')
   })
 })

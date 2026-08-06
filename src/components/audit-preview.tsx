@@ -35,7 +35,7 @@ export function AuditRecordPreview({
   // Added when the Foresight operator screens folded into this console at P13. Those actions run
   // against `micro-foresight`, not `admin-api`, and they do NOT write a row in this estate's
   // hash-chained `audit_events` — foresight records its own decision fields and emits its own
-  // outbox topics (`foresight/src/outbox.ts:66-70). Rendering this block with an invented action
+  // outbox topics (`foresight/src/outbox.ts). Rendering this block with an invented action
   // name would tell an operator they were signing for a record that does not exist, and rendering
   // it EMPTY would be worse still: the lede below would announce "0 rows, hash-chained in order"
   // under a heading promising an audit, which reads as a console that has lost the audit rather

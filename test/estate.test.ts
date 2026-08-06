@@ -153,7 +153,7 @@ describe('market is unreachable', () => {
   })
 
   it('distinguishes "answered 503" from "could not be reached"', () => {
-    // estate.ts:87-94 makes them different strings on purpose: the operator's next move differs.
+    // estate.ts makes them different strings on purpose: the operator's next move differs.
     assert.match(byKey(view).get('openModerationCases')?.reason ?? '', /answered 503/)
   })
 

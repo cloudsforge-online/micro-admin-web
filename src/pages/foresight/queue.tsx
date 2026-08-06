@@ -158,7 +158,7 @@ function IdeaCard({
         resolutionSourceRef: source.resolutionSourceRef,
         // The market's close time starts as the proposal's suggestion. It is the operator's from
         // here: the draft's own screen is where it is changed, and the service refuses a close
-        // time in the past either way (markets.ts:257-259).
+        // time in the past either way (markets.ts).
         closeTime: source.suggestedCloseTime,
       }),
     'The market draft was not created.',
@@ -324,7 +324,7 @@ function IdeaCard({
  * Discarding takes one of the three named refusals, and free text is not accepted.
  *
  * That is foresight's rule, not this panel's (`requireString(body, 'refusalId')`,
- * server.ts:620; the ids come from `REFUSALS`, categories.ts:104-131) and the reason is stated
+ * server.ts; the ids come from `REFUSALS`, categories.ts) and the reason is stated
  * where they are defined: "so the reason a proposal was discarded can be recorded as one of them
  * rather than as free text nobody can count". A rising count of one refusal is how the estate
  * finds out the prompt has drifted.
@@ -396,7 +396,7 @@ function DiscardControl({
  * Edit a proposal before approving it — the middle of "approves, edits or discards".
  *
  * Every field is sent on every save. `PATCH /ideas/:id` is named for a partial update and is not
- * one: all six fields are `requireString`/`requireDate` (server.ts:585-593), and a partial body
+ * one: all six fields are `requireString`/`requireDate` (server.ts), and a partial body
  * answers 400. Sending the whole draft is what the route actually accepts.
  */
 function EditForm({

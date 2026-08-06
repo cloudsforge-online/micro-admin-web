@@ -289,7 +289,7 @@ describe('the decision gate — four eyes, state and the deadline', () => {
   })
 
   it('reports the deadline exactly at the boundary as passed', () => {
-    // `decide()` refuses at `expires_at <= now` (approvals.ts:263), so the console must too.
+    // `decide()` refuses at `expires_at <= now` (approvals.ts), so the console must too.
     const gate = decisionGate(approval({ expiresAt: NOW.toISOString() }), APPROVER, NOW)
     assert.equal(gate.pastDeadline, true)
     assert.equal(gate.decidable, false)
@@ -397,7 +397,7 @@ describe('the preview reproduces the rows admin-api will write', () => {
   })
 
   it('the execution row’s subject is the THING ACTED ON, not the approval', () => {
-    // approvals.ts:350-351. Getting this wrong would make the audit unable to answer "what
+    // approvals.ts. Getting this wrong would make the audit unable to answer "what
     // happened to this ledger entry" by subject.
     const previews = previewDecision(approval(), true, APPROVER)
     assert.equal(previews[1]?.subjectKind, 'ledger_entry')
@@ -521,7 +521,7 @@ describe('the idempotency key is per intention, not per click', () => {
     assert.notEqual(idempotencyKeyFor('grant', ID, 1000), idempotencyKeyFor('grant', ID, 2000))
   })
 
-  it('is at least the eight characters the route requires (server.ts:994)', () => {
+  it('is at least the eight characters the route requires (server.ts)', () => {
     for (const subject of ['', 'a', ID]) {
       assert.ok(idempotencyKeyFor('g', subject, 0).length >= 8)
     }
