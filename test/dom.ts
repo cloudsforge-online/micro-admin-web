@@ -187,7 +187,7 @@ export interface MountOptions {
   /** Extra properties on `window`, for the things a page reads off it that no API returns. */
   windowExtras?: Record<string, unknown>
   /**
-   * Mount inside `<StrictMode>`, the way `src/main.tsx:29` actually mounts this app.
+   * Mount inside `<StrictMode>`, the way `src/main.tsx:52` actually mounts this app.
    *
    * Default `false`, because most scenarios do not care and StrictMode doubles every render. It
    * matters for one class: a guard held in a `useRef` is CREATED TWICE on a StrictMode mount and

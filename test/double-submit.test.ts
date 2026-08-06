@@ -49,7 +49,7 @@
  *
  * ── AND BOTH WAYS ROUND ───────────────────────────────────────────────────────────────────────
  *
- * `src/main.tsx:29` renders under `<StrictMode>`; this harness mounted without it until this file
+ * `src/main.tsx:52` renders under `<StrictMode>`; this harness mounted without it until this file
  * added `strict`. A ref latch is CREATED TWICE on a StrictMode mount, so a guard proven only in
  * the plain mode has never been run the way the app runs it. Every proof below runs twice.
  *

@@ -10,9 +10,18 @@
  * colour alone: Admin's clay (#c2704f) is a warm mid-tone that has no reserved meaning in this
  * estate, and nothing in this console may depend on the accent to say what it is.
  */
-import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import {
+  CloudsForgeBar,
+  CloudsForgeFooter,
+  CookieBanner,
+  MainRegion,
+  SkipLink,
+} from '@cloudsforge/ui'
+import { applyHead } from '@cloudsforge/ui/seo'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PRODUCT } from '../lib/hosts.ts'
+import { consoleMeta } from '../lib/meta.ts'
 import { NAV } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
 
@@ -21,11 +30,24 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
 
   return (
     <>
-      {/* Skip link first in the DOM, because keyboard is the primary input for an operator
-          working through a queue and a console with six nav entries is six tabs to the content. */}
-      <a className="aw-skip" href="#main">
-        Skip to the page
-      </a>
+      {/*
+        Skip link first in the DOM, because keyboard is the primary input for an operator working
+        through a queue and a console with ten nav entries is ten tabs to the content.
+
+        IT IS THE SHARED ONE NOW, AND THE LOCAL ONE WAS HALF THE PATTERN. `.aw-skip` pointed at
+        `#main` and `<main id="main">` below carried no `tabIndex={-1}` — so in Chrome and Safari
+        following the link scrolled the page, left focus on the link itself, and sent the operator's
+        next Tab back into the company bar. On this surface that lands them in the switcher, one
+        keystroke from leaving the console, at the moment they asked to reach the page. `MainRegion`
+        below is the half that was missing; `SkipLink` composes its href from the same `MAIN_ID`
+        constant, so the link and its target cannot disagree.
+
+        The local rule also revealed itself on `:focus-visible` only, where the shared `.cf-skip`
+        uses `:focus`. That difference is not cosmetic: a skip link is activated by keyboard by
+        definition, and `:focus-visible` is a heuristic that a browser is allowed to answer `false`
+        to.
+      */}
+      <SkipLink>Skip to the page</SkipLink>
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
@@ -51,7 +73,18 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
           ))}
         </div>
       </nav>
-      <main className="wt-main" id="main">
+      <DocumentMeta />
+      {/*
+        `MainRegion` rather than a hand-written `<main>`: it sets `id={MAIN_ID}` and `tabIndex={-1}`
+        together, which is the pair the skip link needs and the pair this file used to get half
+        right. The id is `cf-main` now rather than `main`; nothing else in this console referenced
+        the old one — `grep -rn '#main' src/` returned this file alone — and both nginx and the
+        router address pages by path rather than by fragment.
+
+        `className="wt-main"` is carried over unchanged, so every layout rule in styles.css that
+        was written against it still applies.
+      */}
+      <MainRegion className="wt-main">
         {/*
           Not fatal, so not a refusal — but not silent either. `cloudsforgeHosts()` derives the
           apex by stripping a KNOWN subdomain, so an address the registry does not know makes every
@@ -85,7 +118,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
           </p>
         )}
         <Outlet />
-      </main>
+      </MainRegion>
 
       {/*
         The company footer, from @cloudsforge/ui. Not written here, and deliberately not
@@ -100,6 +133,62 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         operator should be able to reach Admin from any page.
       */}
       <CloudsForgeFooter current={PRODUCT} account={account} />
+
+      {/*
+        Last in the document, and therefore last in the tab order.
+
+        ON THIS SURFACE IT RENDERS NOTHING, EVER, AND IT IS MOUNTED ANYWAY. `index.html` carries no
+        `cf-analytics` measurement ID — the reasoning is written out in that file — so `analyticsId()`
+        is null and `CookieBanner` returns null before it draws anything
+        (ui/packages/ui/src/index.tsx:1196). Mounting it costs one function call and buys the thing
+        that is actually hard to keep: every shell in the estate has the same three elements in the
+        same three places, so a reader comparing two of them is comparing surfaces rather than
+        conventions, and a future measurement ID cannot be added here without the banner appearing
+        with it. A shell that omits the component is a shell where adding the ID is silent.
+      */}
+      <CookieBanner />
     </>
   )
+}
+
+/**
+ * Keep the title, the description, the robots directive, the Open Graph block and the canonical
+ * link in step with the address.
+ *
+ * A component in the shell rather than a hook each page calls, because the failure mode of the
+ * second shape is the page that forgets — and on this console the page that forgets is the one
+ * added last, which is the screen nobody has a habit around yet.
+ *
+ * ── WHAT AN OPERATOR ACTUALLY GETS OUT OF THIS ────────────────────────────────────────────────
+ *
+ * The tab title, and it is not a nicety here. This console is worked with several tabs open at
+ * once by design — the queue in one, the request under decision in another, the audit thread in a
+ * third, because a two-operator decision is a comparison — and every one of those tabs read
+ * "CloudsForge Operator Console" until now. A row of identical tabs is a row an operator picks
+ * from by guessing, on the surface where picking the wrong one is the failure the typed
+ * confirmation phrase exists to catch.
+ *
+ * ── THE ONE TAG THIS EMITS THAT `index.html` DELIBERATELY DOES NOT CARRY ───────────────────────
+ *
+ * `og:image`. `brand/assets/admin/` ships no card and 18-build-status.md §3.3k records that as a
+ * decision — nobody shares an operator console outward — and `test/brand-chrome.test.ts` asserts
+ * the absence with the same force it asserts a favicon's presence. `applyHead()` writes the
+ * estate's DEFAULT card at runtime and offers no way to suppress it (seo.ts:187-199 emits it
+ * unconditionally). That is accepted rather than worked around, for one reason that decides it:
+ * the fetchers §3.3k is about — chat, social, link previews — do not execute JavaScript, so they
+ * read `index.html` and find no card, which is exactly what was decided. The static absence is
+ * still asserted and still has to be argued for to change.
+ */
+function DocumentMeta() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // `window.location.origin` is read HERE rather than inside `lib/meta.ts`, which is what keeps a
+    // hostname out of the module and out of the artefact: one image is served from localhost, from
+    // a preview deployment and from `admin.<apex>`, and composes correct absolute URLs on each.
+    // `test/no-build-time-config.test.ts` is the rule this obeys.
+    applyHead(consoleMeta(pathname), window.location.origin)
+  }, [pathname])
+
+  return null
 }

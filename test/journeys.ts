@@ -74,7 +74,10 @@ export const SCENARIOS: readonly Scenario[] = [
     tier: 'T1',
     unblocks: {
       was: '§8.4 — "no support-lookup screen (§8.4)". admin-web had eight routes and none was this.',
-      by: 'src/pages/support.tsx, routed at src/app.tsx:89.',
+      // The line was 89 and is 95: the P13 Foresight fold and the routes added after this citation
+      // was written moved it down. Re-read from source rather than dropped — a citation that has
+      // gone stale is still the only pointer anybody has, and deleting it costs more than fixing it.
+      by: 'src/pages/support.tsx, routed at src/app.tsx:95.',
     },
     caveat:
       'Doc 22’s row ends "every read carries an audit record and a reason code". That is a property ' +

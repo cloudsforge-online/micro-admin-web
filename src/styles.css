@@ -30,9 +30,22 @@ body {
   background: var(--cf-bg);
   color: var(--cf-fg);
   font-family: var(--cf-font-sans);
-  /* The bar is dark on every surface; the page follows the substrate. */
-  color-scheme: dark;
 }
+
+/* `color-scheme: dark` was the last declaration in the rule above, and it had to go for the light
+   scheme to work at all.
+
+   It is a BROWSER-level declaration rather than a token one: it pins the native form controls, the
+   scrollbars and the browser's own focus ring to the dark set regardless of what @cloudsforge/ui
+   resolves. A reader on `data-cf-scheme="light"` — or on `auto` in a light environment, which is
+   what this console now ships — would have been served a light page with dark scrollbars and dark
+   `<textarea>` chrome, and the two screens where that lands are the approval gate and the restore
+   gate, which are made of exactly those controls.
+
+   The declaration is not lost, it has moved to where it can follow the reader: `index.html` says
+   `<meta name="color-scheme" content="dark light">`, which offers the browser BOTH sets, and
+   `data-cf-scheme` on <html> tells the token layer which palette to resolve. The two are a pair —
+   the token layer cannot restyle a native scrollbar, and the meta tag cannot pick an accent. */
 
 /* ----------------------------- sub-nav ----------------------------- */
 
@@ -168,8 +181,25 @@ body {
   margin: 0.5rem 0 0;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * `--cf-accent-text`, AND NOT `--cf-accent`, EVERYWHERE A COLOUR MEETS TYPE IN THIS FILE.
+ *
+ * This console's accent is clay, `#c2704f`, and it MEASURES 3.82:1 on the tightest ground this
+ * system composes text on (@cloudsforge/ui/tokens.css:924). The AA floor for body text is 4.5:1.
+ * `--cf-accent` is validated at 3:1 — the NON-TEXT floor, which is the right one for the borders
+ * and the fills it is used for below and the wrong one for `color:`. The design system shipped a
+ * derived step for exactly this, `--cf-accent-text`, at `#d57b57` and 4.53:1 — the same colour in
+ * linear light, walked until it clears — and tokens.css:742 states the rule in one line: "`color:`
+ * is --cf-accent-text".
+ *
+ * FOUR RULES IN THIS FILE SET `color: var(--cf-accent)` and all four are moved: `.wt-link` (every
+ * in-app link on every screen), `.aw-opmark` (the word OPERATOR in the bar, which is the one thing
+ * on this surface that says which surface it is), `.aw-link`, and `.aw-rail__mark` on the current
+ * step of the lifecycle rail. The BORDERS and the FILLS keep `--cf-accent`: they clear the floor
+ * that applies to them, and re-pointing them would change colours that are already correct.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
 .wt-link {
-  color: var(--cf-accent);
+  color: var(--cf-accent-text);
 }
 
 .wt-facts {
@@ -293,29 +323,28 @@ body {
 
 /* ----------------------------- chrome ------------------------------ */
 
-/* Keyboard is the primary input for an operator working through a queue, so the skip link is the
-   first focusable thing on the page rather than an afterthought below the bar. */
-.aw-skip {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  padding: 0.5rem 0.9rem;
-  background: var(--cf-accent);
-  color: var(--cf-accent-ink);
-  font-weight: 600;
-  border-radius: 0 0 6px 0;
-}
+/* `.aw-skip` and `.aw-skip:focus-visible` were here. Keyboard is still the primary input for an
+   operator working through a queue, and the skip link is still the first focusable thing on the
+   page — it is `<SkipLink>` from @cloudsforge/ui now, styled by `.cf-skip` in ui.css, so the
+   sixteen surfaces in this estate that had no skip link at all get the one this console had.
 
-.aw-skip:focus-visible {
-  left: 0;
-}
+   Two differences in the shared rule, both improvements on what was here:
+
+     - it reveals itself with a `transform` rather than by moving `left` from -9999px. An
+       off-screen element is in the tab order either way, but a transform leaves the focused state
+       an ordinary visible element with an ordinary focus ring rather than an element the browser
+       believes is somewhere it is not;
+     - it triggers on `:focus`, not `:focus-visible`. A skip link is reached by keyboard by
+       definition, and `:focus-visible` is a heuristic a browser is permitted to answer `false` to
+       — in which case this console's skip link was invisible at the moment it was in use, which is
+       the exact failure the comment above it warned about. */
 
 /* A word and a border, never a colour alone: nothing in this console may depend on the accent to
    say what the surface is. */
 .aw-opmark {
   border: 1px solid var(--cf-accent);
-  color: var(--cf-accent);
+  /* The text step; the border keeps the plain token. See the block above .wt-link. */
+  color: var(--cf-accent-text);
   border-radius: 999px;
   padding: 0.1rem 0.6rem;
   font-size: 0.72rem;
@@ -441,7 +470,7 @@ body {
 }
 
 .aw-state--warn {
-  color: var(--cf-warn);
+  color: var(--cf-warn-text);
 }
 
 .aw-state--crit {
@@ -661,7 +690,7 @@ body {
 
 /* "you raised this" — the fact that decides whether the reader can act on the row. */
 .aw-you {
-  color: var(--cf-warn);
+  color: var(--cf-warn-text);
   font-weight: 600;
 }
 
@@ -679,7 +708,7 @@ body {
 }
 
 .aw-link {
-  color: var(--cf-accent);
+  color: var(--cf-accent-text);
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
@@ -811,7 +840,7 @@ body {
 /* Not a disabled button. A disabled control reads as "not yet" and gets clicked at; the reason
    takes its place instead. See src/lib/catalogue.ts. */
 .aw-action__blocked {
-  color: var(--cf-warn);
+  color: var(--cf-warn-text);
   font-size: 0.84rem;
   max-width: 34ch;
 }
@@ -819,7 +848,7 @@ body {
 .aw-action__why,
 .aw-danger__why {
   margin: 0;
-  color: var(--cf-warn);
+  color: var(--cf-warn-text);
   font-size: 0.84rem;
 }
 
@@ -1172,11 +1201,11 @@ body {
 }
 
 .aw-pill--live .aw-pill__glyph {
-  color: var(--cf-viz-good);
+  color: var(--cf-good-text);
 }
 
 .aw-pill--warn .aw-pill__glyph {
-  color: var(--cf-viz-warn);
+  color: var(--cf-warn-text);
 }
 
 .aw-pill--done {
@@ -1202,7 +1231,7 @@ body {
 }
 
 .aw-rail__step--now .aw-rail__mark {
-  color: var(--cf-accent);
+  color: var(--cf-accent-text);
 }
 
 .aw-rail--void {
@@ -1477,7 +1506,7 @@ a.aw-sources__title {
 }
 
 .aw-honesty__list--no .aw-honesty__heading {
-  color: var(--cf-warn);
+  color: var(--cf-warn-text);
 }
 
 .aw-honesty__items {

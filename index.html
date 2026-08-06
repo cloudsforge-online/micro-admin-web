@@ -13,12 +13,40 @@
   'warm' is the ash ramp the brand marks in brand/assets/admin/ are drawn on: their ground is a
   flat #12100f warm near-black, and the warm substrate's --cf-ash-900 (#0e0c0a) is the same
   family, so the favicon sits on the page without a visible plate around it.
+
+  data-cf-scheme is the THIRD of the three, and it arrives with @cloudsforge/ui 1.1. `auto` follows
+  the reader's operating system; `light` and `dark` force one. It is set here, statically, for the
+  same reason the other two are — a theme flash is worse than a theme nobody asked for.
+
+  THIS CONSOLE HAD NO LIGHT MODE AND ONE LOCAL OVERRIDE THAT FOUGHT ONE. There is no
+  `@media (prefers-color-scheme: light)` block in src/styles.css to delete, but `body` carried
+  `color-scheme: dark`, which pins the browser's own form controls, scrollbars and focus rings to
+  the dark set no matter what the token layer resolves. That declaration is gone; the meta tag
+  below is what replaces it, and it offers BOTH sets so the browser can follow the reader.
+
+  An operator working a queue at 09:00 by a window is a reader in a light environment. Serving them
+  a page they have to fight is not a policy this console ever decided on — it is what it inherited
+  from a template written when the estate had one scheme.
 -->
-<html lang="en-GB" data-cf-product="admin" data-cf-substrate="warm">
+<html lang="en-GB" data-cf-product="admin" data-cf-substrate="warm" data-cf-scheme="auto">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="colour-scheme" content="dark" />
+    <!--
+      `color-scheme`, AND NOT `colour-scheme`, WHICH IS WHAT THIS LINE SAID.
+
+      The estate writes British English in its prose and that habit reached a place that is not
+      prose. `color-scheme` is a registered metadata name (CSS Color Adjustment Module Level 1
+      §2.4) and a browser matches it literally; `colour-scheme` matches nothing, so this tag has
+      been INERT since the console shipped. The declaration meant to tell the browser which control
+      set to draw did nothing at all, and every `<input>` and `<textarea>` on the approval and
+      restore gates — the two screens in this repository where a misread field has consequences —
+      was drawn from the browser's own default rather than from the page's declaration.
+
+      Both values are offered rather than `dark` alone, because `data-cf-scheme="auto"` above means
+      the token layer now resolves whichever palette the reader's system asks for. Declaring only
+      `dark` would leave the chrome the browser draws disagreeing with the page around it.
+    -->
     <!--
       The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
       the reason an error report can be pinned to the deploy that introduced it. It is an identity
@@ -27,9 +55,49 @@
     <meta name="cf-release" content="dev" />
 
     <!--
+      ══════════════════════════════════════════════════════════════════════════════════════════
+      THERE IS DELIBERATELY NO `<meta name="cf-analytics">` IN THIS FILE, AND ITS ABSENCE IS THE
+      DECISION RATHER THAN AN OVERSIGHT.
+
+      Every PUBLIC surface in this estate carries one: a GA4 measurement ID read at runtime by
+      `@cloudsforge/ui/consent`, never a `<script src>`, and injected only by the Accept button in
+      `CookieBanner`. This console carries none, so `analyticsId()` returns null, `CookieBanner`
+      renders nothing at all (ui/packages/ui/src/index.tsx:1196) and no tag can ever be injected —
+      not even by an operator who wanted one.
+
+      THE REASON IS THE ADDRESS BAR. GA4 reports `page_location` on every hit, and this console's
+      addresses ARE estate identifiers: `/approvals/<uuid>` is a pending two-operator decision and
+      `/backups/<uuid>` is the page a live estate restore is raised from. Shipping those to a third
+      party would put the identity of every privileged action in flight into an analytics property,
+      which is a worse disclosure than the page-view count is worth. An operator console is also a
+      population of a dozen people; there is no product question a sample that size answers.
+
+      `initAnalytics()` in src/main.tsx STILL RUNS. Priming Consent Mode denied is unconditional
+      and issues no request — see the note beside the call.
+      ══════════════════════════════════════════════════════════════════════════════════════════
+    -->
+
+    <!--
       This console must not be indexed, previewed, or archived. It is operator-only and lives
       behind a gateway rule that keeps it off the public internet; this tag is the second line,
       for the case where something reaches it anyway. The gateway is the first — see README.md.
+
+      ── IT IS ALSO DERIVED NOW, AND NOT TYPED TWICE ────────────────────────────────────────────
+
+      `noindex, nofollow` is not this file's opinion: `robotsDirective()`
+      (ui/packages/ui/src/seo.ts:139-140) returns it for any surface that is `adminOnly`, and
+      `admin`'s registry row carries `adminOnly: true` (ui/packages/ui/src/surfaces.ts:340). The
+      same field keeps this surface out of the estate sitemap, because `SITEMAP_SURFACES` filters
+      on it (ui/packages/ui/src/sitemap.ts:48). One field, three consequences, no second opinion to
+      go stale — which is what "derive it from the registry" is for.
+
+      `noarchive, noimageindex` are this console's OWN two, kept, and they are why the string is
+      spelled in `src/lib/meta.ts` as `ROBOTS` and passed to `surfaceMeta()` as the documented
+      per-surface override (ui/packages/ui/src/seo.ts:101-106). `applyHead()` rewrites this tag on
+      every navigation; without the override it would rewrite it to the registry's shorter string
+      and silently drop the archive and image refusals a second after the page loaded.
+      `test/sitemap.test.ts` reads THIS FILE and fails if the two spellings drift, beside the registry
+      field the first two directives are derived from.
     -->
     <meta name="robots" content="noindex, nofollow, noarchive, noimageindex" />
 
