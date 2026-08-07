@@ -22,6 +22,7 @@
  * for what the gateway must enforce in front of it.
  */
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ScrollToTop } from './components/scroll-to-top.tsx'
 import { AppShell } from './components/shell.tsx'
 import { ForesightSection } from './components/foresight-section.tsx'
 import { AuthProvider, ProtectedRoute } from './lib/auth.tsx'
@@ -49,6 +50,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<AppShell unregistered={placement === 'unregistered'} />}>
