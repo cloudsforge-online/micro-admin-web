@@ -772,16 +772,55 @@ describe('the stylesheet', () => {
     assert.deepEqual(hexes, [], `literal colours in styles.css: ${hexes.join(', ')}`)
   })
 
-  it('gives the page a skip link', () => {
-    assert.match(shell, /className="aw-skip"/)
-    assert.match(shell, /href="#main"/)
-    assert.match(styles, /\.aw-skip:focus-visible/)
+  /*
+   * ── THIS CHECK MOVED TARGET WITH @cloudsforge/ui 1.1, AND DID NOT WEAKEN ────────────────────
+   *
+   * It used to assert a LOCAL skip link: `.aw-skip`, `href="#main"`, and a `:focus-visible` rule
+   * in this repository's stylesheet. All three are gone because the control is shared now, and a
+   * check pointed at a deleted class is a check that passes by being deleted — which is the shape
+   * this repository's brand-chrome suite already argues against at length.
+   *
+   * So the same three facts are asserted about the shared control instead, and one MORE that the
+   * local version could never have satisfied: the link's target has to carry `tabIndex={-1}`.
+   * `.aw-skip` pointed at `<main id="main">`, which had no tabindex, so in Chrome and Safari
+   * activating it scrolled the page and left focus on the link — the reader's next Tab went back
+   * into the company bar. `SkipLink` and `MainRegion` set the href and the id from the one
+   * `MAIN_ID` constant and `MainRegion` sets the tabindex, so the pair cannot be half-applied
+   * again.
+   */
+  it('gives the page a skip link, and it is the shared one', () => {
+    assert.match(shell, /<SkipLink>/)
+    const sharedImport = /import \{([^}]*)\} from '@cloudsforge\/ui'/.exec(shell)?.[1] ?? ''
+    for (const named of ['SkipLink', 'MainRegion', 'CookieBanner']) {
+      assert.ok(sharedImport.includes(named), `${named} is not imported from @cloudsforge/ui`)
+    }
+    // The target, which is the half the local implementation was missing.
+    assert.match(shell, /<MainRegion className="wt-main">/)
+    // And the shared rule really does reveal it on focus. Read from the design system rather than
+    // asserted about it: a skip link that stays hidden when focused is worse than none.
+    const uiCss = readFileSync(
+      new URL('../node_modules/@cloudsforge/ui/dist/ui.css', import.meta.url),
+      'utf8',
+    )
+    assert.match(uiCss, /\.cf-skip:focus,\n\.cf-skip:focus-visible \{/)
   })
 
   it('puts the skip link first in the DOM', () => {
     // Compared against the ELEMENT, not the import at the top of the file.
     const source = withoutComments(shell)
-    assert.ok(source.indexOf('aw-skip') < source.indexOf('<CloudsForgeBar'))
+    assert.ok(source.indexOf('<SkipLink>') < source.indexOf('<CloudsForgeBar'))
+  })
+
+  /*
+   * The consent banner is LAST, which is what makes it non-modal in practice: a reader who came
+   * here to decide an approval can reach every control on the page before the banner, and answer
+   * it afterwards. It draws nothing at all on this surface — no measurement ID is shipped — and
+   * mounting it is still asserted, because a shell that omits the component is a shell where
+   * adding an ID later turns analytics on with no banner.
+   */
+  it('mounts the consent banner last, after the footer', () => {
+    const source = withoutComments(shell)
+    assert.ok(source.indexOf('<CookieBanner />') > source.indexOf('<CloudsForgeFooter'))
   })
 
   it('gives every interactive element a visible focus ring', () => {
