@@ -1,6 +1,6 @@
 {
   "name": "@cloudsforge/admin-web",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "packageManager": "pnpm@11.9.0",
   "private": true,
   "description": "The CloudsForge operator console. Estate view, the two-operator approval queue, the tamper-evident audit, flags and broadcasts.",
