@@ -340,12 +340,18 @@ export function readAmount(raw: unknown): string | null {
  * The amount an audit row is about, if it names one.
  *
  * The field names are the ones this estate's own actions write: `engagement.transfer` puts
- * `amountShards` in `params` (`admin-api/src/actions.ts`), and a ledger movement carries
+ * `amountWei` in `params` (`admin-api/src/actions.ts`), and a ledger movement carries
  * `amount`. Anything else answers null rather than being guessed at — a support screen that
  * hunted through a payload for the first thing that looked like a number would eventually find a
  * nonce and call it money.
+ *
+ * The field was `amountShards` until 2026-08-10 (micro-org#226). The old spelling is NOT kept
+ * beside the new one, because no payload in the estate carries it: on mainnet that day there were
+ * no `engagement.%` approvals at all and no audit event whose payload mentioned `amountShards` or
+ * `transferCapShards`. A fallback for a value that has never existed is a line nobody can ever
+ * delete with confidence.
  */
-export const AMOUNT_FIELDS: readonly string[] = Object.freeze(['amountShards', 'amount'])
+export const AMOUNT_FIELDS: readonly string[] = Object.freeze(['amountWei', 'amount'])
 
 export function amountOf(payload: Record<string, unknown>): { field: string; value: string } | null {
   for (const field of AMOUNT_FIELDS) {

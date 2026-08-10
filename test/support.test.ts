@@ -315,7 +315,7 @@ describe('readAmount — the BigInt("") guard', () => {
 
 describe('amountOf', () => {
   it('finds the field this estate actually writes', () => {
-    assert.deepEqual(amountOf({ amountShards: '250' }), { field: 'amountShards', value: '250' })
+    assert.deepEqual(amountOf({ amountWei: '250' }), { field: 'amountWei', value: '250' })
   })
 
   it('falls back to a plain amount', () => {
@@ -329,10 +329,10 @@ describe('amountOf', () => {
   })
 
   it('does not let an empty amount field become a zero', () => {
-    assert.equal(amountOf({ amountShards: '' }), null)
+    assert.equal(amountOf({ amountWei: '' }), null)
   })
 
   it('skips an unusable first field and takes the usable second', () => {
-    assert.deepEqual(amountOf({ amountShards: '', amount: '9' }), { field: 'amount', value: '9' })
+    assert.deepEqual(amountOf({ amountWei: '', amount: '9' }), { field: 'amount', value: '9' })
   })
 })
