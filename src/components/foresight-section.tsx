@@ -29,6 +29,7 @@
  * controls that move money on a chain. If hiding a link were ever load-bearing, an operator with a
  * bookmark would be authorised by their browser history. It is not, and it must not become so.
  */
+import { SubNav } from '@cloudsforge/ui'
 import { NavLink, Outlet } from 'react-router-dom'
 import { FORESIGHT_NAV } from '../lib/routes.ts'
 
@@ -41,9 +42,31 @@ export function ForesightSection() {
         saying nothing the nav does not. The section is identified by the nav's own accessible
         name, which is what a screen reader announces on entering it.
 
-        Deliberately no new CSS namespace either: this reuses `wt-subnav`, the same component the
-        top-level nav uses, with one modifier. A second set of hand-rolled section styles is how
-        two navigations in one console come to disagree about their own height.
+        Deliberately no new CSS namespace either: this is `SubNav` from @cloudsforge/ui, the same
+        component the top-level nav uses, with one modifier of this console's own. A second set of
+        hand-rolled section styles is how two navigations in one console come to disagree about
+        their own height.
+
+        ── WHY THE MODIFIER IS STILL LOCAL, AND WHY IT IS A WRAPPER ────────────────────────────────
+
+        `.wt-subnav--section` un-sticks the strip, and that is the whole modifier. `.cf-subnav` pins
+        itself to `var(--cf-bar-h)` so the console's top-level nav stays reachable while a long
+        audit page scrolls. Two sticky rows at the same offset either stack — costing a third of a
+        laptop viewport on the screen whose job is a long queue — or collide, with the second
+        silently drawn over the first. This nav is short and sits at the top of its own section, so
+        it scrolls away with it.
+
+        It is NOT pushed up into @cloudsforge/ui because this console is the only surface in the
+        estate with two levels of navigation, and a modifier with one caller is a guess about the
+        second. The day a second surface needs it, it has two callers and an argument; today it
+        would be a shared class that only this file can explain.
+
+        A WRAPPER rather than a `className` prop, because `SubNav` deliberately takes only `label`
+        and `children` (ui/packages/ui/src/index.tsx). Passing arbitrary classes into a shared
+        landmark is how the ten local copies happened in the first place — the escape hatch gets
+        used, then edited, then diverges. So the local rule reaches the shared element by descent
+        (`.wt-subnav--section .cf-subnav`), which any stylesheet can do without the component
+        growing a seam.
       */}
       {/*
         `end` is per-entry rather than a rule, and getting it wrong is invisible until somebody
@@ -51,20 +74,22 @@ export function ForesightSection() {
         would match every path beneath /foresight. Markets must NOT have it, because the detail
         page lives under it and the section link should stay lit while an operator is reading one.
       */}
-      <nav className="wt-subnav wt-subnav--section" aria-label="Foresight">
-        <div className="wt-subnav__inner">
+      <div className="wt-subnav--section">
+        <SubNav label="Foresight">
           {FORESIGHT_NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) => `wt-subnav__link${isActive ? ' is-active' : ''}`}
+              className={({ isActive }) =>
+                `cf-subnav__link${isActive ? ' cf-subnav__link--current' : ''}`
+              }
             >
               {item.label}
             </NavLink>
           ))}
-        </div>
-      </nav>
+        </SubNav>
+      </div>
 
       <Outlet />
     </>

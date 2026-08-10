@@ -8,7 +8,19 @@
  *
  * EVERY COLOUR, SPACE AND FONT IS A TOKEN. A literal hex here is a colour that will not follow
  * the substrate, and a page that does not follow the substrate is the one page in the estate that
- * looks wrong on a dark display. The console's ground is the WARM ash ramp
+ * looks wrong on a dark display.
+ *
+ * THAT SENTENCE WAS TRUE OF COLOUR ONLY UNTIL 2026-08-10, and it was pinned for colour only: the
+ * "names no literal colour" test in test/render.test.ts asserted the hexes and nothing asserted
+ * the rest. Under it, this file spent 75 literal `font-size` declarations and not one token, and
+ * 181 literal spacing lengths — so a stylesheet whose header claimed three scales was following
+ * one. Both are now swept to the nearest `--cf-text-*` / `--cf-space-*` step from
+ * @cloudsforge/ui's tokens.css, and both halves of the claim are pinned by tests of the same
+ * force as the colour one. The handful of lengths that are LAYOUT rather than rhythm — a run-out,
+ * an empty-state inset, reading measures in `ch`, grid tracks, flex bases, the spinner's box —
+ * stay literals and each says so at the line.
+ *
+ * The console's ground is the WARM ash ramp
  * (`--cf-ash-900`, #0e0c0a) set by `data-cf-substrate="warm"` in index.html — the same family as
  * the #12100f field the brand marks in `brand/assets/admin/` are drawn on, so the favicon has no
  * visible plate around it. The accent is clay, #c2704f, which comes from
@@ -50,97 +62,101 @@ body {
 /* ----------------------------- sub-nav ----------------------------- */
 
 /*
- * Docked at exactly the bar's height. `--cf-bar-h` is the token the bar itself is sized with, so
- * the two cannot drift; a copied `46px` would leave a gap or an overlap the day the bar changes,
- * on every surface at once and on none of the ones anybody rechecked.
+ * THE STRIP IS `SubNav` FROM @cloudsforge/ui, AND `.wt-subnav`, `.wt-subnav__inner` AND
+ * `.wt-subnav__link*` ARE DELETED RATHER THAN LEFT HERE BESIDE IT.
+ *
+ * Deleted rather than kept, because a local copy that is never applied is a copy the next reader
+ * edits. Measured 2026-08-10, ten frontends in this estate declared this same strip in their own
+ * stylesheet under six class prefixes; the census is in `ui/packages/ui/src/subnav.test.ts`.
+ *
+ * WHAT THIS COPY GOT RIGHT, so that it is on the record rather than lost with the rules: it docked
+ * at `var(--cf-bar-h)` rather than at a copied pixel count, it marked the current section in three
+ * channels (ink, weight and a 2px underline) rather than in colour alone, and it drew a
+ * `:focus-visible` ring with a negative offset so the ring is not clipped by the scroll container.
+ * All three survive in `.cf-subnav*`, which is why the shared rule was safe to take.
+ *
+ * WHAT HAD DRIFTED, and is fixed by taking the shared one:
+ *
+ *   - `max-width: 76rem` is 1216px against the 1200px `.cf-bar__inner` resolves from `--cf-max-w`,
+ *     so the second row of the header sat 8px proud of the first on each side, on every screen wide
+ *     enough to show it;
+ *   - no `overflow-x` and no `white-space: nowrap`, so ten sections on a narrow screen wrapped or
+ *     clipped instead of scrolling — the defect nine of the ten copies had;
+ *   - the gap, the gutter, the link padding and the type were literals, so none of them followed
+ *     the estate's scales when `--cf-text-md` was raised from 0.82rem to 1rem.
+ *
+ * `test/render.test.ts` asserts both halves of this: that the shared classes exist in ui.css, and
+ * that no `.wt-subnav__*` rule has come back here.
  */
-.wt-subnav {
-  position: sticky;
-  top: var(--cf-bar-h);
-  z-index: 40;
-  background: var(--cf-bg-raised);
-  border-bottom: 1px solid var(--cf-line);
-}
 
 /*
- * The Foresight section's own navigation, one level below the console's.
+ * The Foresight section's own navigation, one level below the console's — the ONE part of the
+ * strip that stays local, layered on top of the shared classes rather than replacing them.
  *
- * NOT sticky, and that is the whole modifier. `.wt-subnav` pins itself to `var(--cf-bar-h)` — the
+ * NOT sticky, and that is the whole modifier. `.cf-subnav` pins itself to `var(--cf-bar-h)` — the
  * company bar's height — so that the console's nav stays reachable while a long audit page
  * scrolls. Two sticky bars would either stack (costing a third of a laptop's viewport on a screen
  * whose job is a long queue) or collide at the same offset, with the second silently drawn over
  * the first. The section nav is short and sits at the top of its own section, so it scrolls away
  * with it.
+ *
+ * IT IS NOT PUSHED UP INTO @cloudsforge/ui because this console is the only surface in the estate
+ * with two levels of navigation, so the modifier has exactly one caller. A shared modifier with one
+ * caller is a guess about the second one; the day a second surface needs it, it arrives with an
+ * argument instead.
+ *
+ * It reaches the shared element by DESCENT rather than through a `className` prop, because `SubNav`
+ * takes only `label` and `children` on purpose. An escape hatch on a shared landmark is how ten
+ * copies of it came to exist.
  */
-.wt-subnav--section {
+.wt-subnav--section .cf-subnav {
   position: static;
   top: auto;
   z-index: auto;
   background: transparent;
   border-bottom: 1px solid var(--cf-line);
-  margin-bottom: 1.25rem;
 }
 
-.wt-subnav--section .wt-subnav__inner {
-  padding: 0;
+.wt-subnav--section {
+  margin-bottom: var(--cf-space-xl);
 }
 
-.wt-subnav__inner {
-  display: flex;
-  gap: 0.25rem;
-  align-items: stretch;
-  max-width: 76rem;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.wt-subnav__link {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.7rem 0.85rem;
-  color: var(--cf-fg-dim);
-  text-decoration: none;
-  font-size: 0.875rem;
-  /* The active marker is a 2px underline in the accent, and the LABEL also changes weight and
-     colour: colour is never the only channel. */
-  border-bottom: 2px solid transparent;
-}
-
-.wt-subnav__link:hover {
-  color: var(--cf-fg);
-  background: var(--cf-surface-hover);
-}
-
-.wt-subnav__link.is-active {
-  color: var(--cf-fg);
-  font-weight: 600;
-  border-bottom-color: var(--cf-accent);
-}
-
-.wt-subnav__link:focus-visible {
-  outline: 2px solid var(--cf-accent);
-  outline-offset: -2px;
+/* Flush with the page, which already has the gutter. The shared strip carries its own because it
+   spans the viewport; this one sits inside `.wt-main` and would be indented twice. */
+.wt-subnav--section .cf-subnav__inner {
+  padding-inline: 0;
 }
 
 /* ------------------------------ page ------------------------------- */
 
+/*
+ * `--cf-max-w`, not `76rem`. 76rem is 1216px and the company bar and footer are 1200, so every
+ * heading on every screen of this console began 8px to the left of the wordmark above it. There is
+ * no need for `box-sizing: border-box` here the way there was in the sibling repositories: the
+ * `* { box-sizing: border-box }` reset at the top of this file already covers it, and it covers the
+ * shared classes too.
+ *
+ * The `4rem` stays a literal. It is the run-out under the last panel before the footer, 64px, and
+ * the spacing scale tops out at `--cf-space-3xl` (32px) — half of it is not what this padding is
+ * for, and there is no step to move it to. Left, rather than forced.
+ */
 .wt-main {
-  max-width: 76rem;
+  max-width: var(--cf-max-w);
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: var(--cf-space-2xl) var(--cf-space-xl) 4rem;
 }
 
 .wt-page__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: var(--cf-space-xl);
+  margin-bottom: var(--cf-space-xl);
 }
 
 .wt-page__title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: var(--cf-text-xl);
   letter-spacing: -0.01em;
 }
 
@@ -148,13 +164,13 @@ body {
   background: var(--cf-surface-solid);
   border: 1px solid var(--cf-line);
   border-radius: 10px;
-  padding: 1rem 1.1rem;
-  margin-bottom: 1rem;
+  padding: var(--cf-space-xl);
+  margin-bottom: var(--cf-space-xl);
 }
 
 .wt-panel__title {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--cf-space-lg);
+  font-size: var(--cf-text-md);
   color: var(--cf-fg-dim);
   font-weight: 600;
 }
@@ -162,23 +178,23 @@ body {
 .wt-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: var(--cf-space-lg);
+  margin-bottom: var(--cf-space-xl);
 }
 
 .wt-banner {
-  margin: 0 0 1rem;
-  padding: 0.6rem 0.8rem;
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-md) var(--cf-space-lg);
   border-radius: 8px;
   border: 1px dashed var(--cf-line-strong);
   color: var(--cf-fg-dim);
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 .wt-note {
   color: var(--cf-fg-dim);
-  font-size: 0.85rem;
-  margin: 0.5rem 0 0;
+  font-size: var(--cf-text-sm);
+  margin: var(--cf-space-sm) 0 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -205,9 +221,9 @@ body {
 .wt-facts {
   display: grid;
   grid-template-columns: minmax(8rem, auto) 1fr;
-  gap: 0.35rem 1rem;
+  gap: var(--cf-space-xs) var(--cf-space-xl);
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .wt-facts dt {
@@ -220,7 +236,7 @@ body {
 
 .wt-facts--mono dd {
   font-family: var(--cf-font-mono, ui-monospace, monospace);
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
 }
 
 /* ------------------------- the four states ------------------------- */
@@ -234,14 +250,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  text-align: center;
-  padding: 3rem 1rem;
+  gap: var(--cf-space-sm);
+  /* The `3rem` stays a literal: 48px is a step and a half past the top of the spacing scale
+     (`--cf-space-3xl`, 32px), and snapping it would take a third off the height of every empty,
+     failed and forbidden state in the console to satisfy a rule about rhythm between adjacent
+     elements. This is the inset that makes a state read as a state rather than as a missing row. */
+  padding: 3rem var(--cf-space-xl);
   border-radius: 10px;
 }
 
 .wt-state__icon {
-  font-size: 1.5rem;
+  font-size: var(--cf-text-2xl);
   line-height: 1;
 }
 
@@ -254,7 +273,7 @@ body {
 .wt-state__meta {
   margin: 0;
   color: var(--cf-fg-dim);
-  font-size: 0.875rem;
+  font-size: var(--cf-text-sm);
   max-width: 34rem;
 }
 
@@ -289,12 +308,14 @@ body {
  */
 .wt-reqid {
   user-select: all;
-  padding: 0.1rem 0.35rem;
+  padding: var(--cf-space-3xs) var(--cf-space-xs);
   border-radius: 4px;
   background: var(--cf-bg-sunken);
   font-family: var(--cf-font-mono, ui-monospace, monospace);
 }
 
+/* A fixed icon box, not a spacing step: the ring has to be square and it has to be the size of the
+   word beside it. `width`/`height` are layout, and the sweep left them alone. */
 .wt-spinner {
   width: 1.1rem;
   height: 1.1rem;
@@ -346,8 +367,8 @@ body {
   /* The text step; the border keeps the plain token. See the block above .wt-link. */
   color: var(--cf-accent-text);
   border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-  font-size: 0.72rem;
+  padding: var(--cf-space-3xs) var(--cf-space-md);
+  font-size: var(--cf-text-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -355,14 +376,14 @@ body {
 /* ----------------------------- page ------------------------------- */
 
 .aw-page-head {
-  margin: 0 0 1.5rem;
-  padding-bottom: 1rem;
+  margin: 0 0 var(--cf-space-2xl);
+  padding-bottom: var(--cf-space-xl);
   border-bottom: 1px solid var(--cf-line);
 }
 
 .aw-page-title {
-  margin: 0 0 0.4rem;
-  font-size: 1.55rem;
+  margin: 0 0 var(--cf-space-xs);
+  font-size: var(--cf-text-2xl);
   line-height: 1.2;
 }
 
@@ -375,22 +396,22 @@ body {
 .aw-page-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: var(--cf-space-sm);
+  margin: var(--cf-space-sm) 0;
 }
 
 .aw-crumbs {
-  margin-bottom: 1rem;
+  margin-bottom: var(--cf-space-xl);
   color: var(--cf-fg-mute);
-  font-size: 0.86rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.75rem;
-  margin: 0 0 1.25rem;
+  gap: var(--cf-space-lg);
+  margin: 0 0 var(--cf-space-xl);
 }
 
 .aw-toolbar--form {
@@ -400,42 +421,42 @@ body {
 .aw-next {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  gap: var(--cf-space-lg);
+  margin-top: var(--cf-space-2xl);
 }
 
 .aw-filters {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--cf-space-xl);
   color: var(--cf-fg-dim);
-  font-size: 0.88rem;
+  font-size: var(--cf-text-sm);
 }
 
 /* ----------------------------- panels ----------------------------- */
 
 .aw-panel {
-  margin: 0 0 1.5rem;
-  padding: 1.1rem 1.2rem;
+  margin: 0 0 var(--cf-space-2xl);
+  padding: var(--cf-space-xl);
   background: var(--cf-bg-raised);
   border: 1px solid var(--cf-line);
   border-radius: 10px;
 }
 
 .aw-panel__title {
-  margin: 0 0 0.5rem;
-  font-size: 1.05rem;
+  margin: 0 0 var(--cf-space-sm);
+  font-size: var(--cf-text-md);
 }
 
 .aw-panel__subtitle {
-  margin: 1.1rem 0 0.35rem;
-  font-size: 0.95rem;
+  margin: var(--cf-space-xl) 0 var(--cf-space-xs);
+  font-size: var(--cf-text-md);
 }
 
 .aw-panel__lede,
 .aw-panel__aside {
-  margin: 0 0 0.9rem;
+  margin: 0 0 var(--cf-space-xl);
   max-width: 74ch;
   color: var(--cf-fg-dim);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 /* A refusal is not an error. It is bordered rather than filled, so it reads as a boundary the
@@ -455,8 +476,8 @@ body {
 .aw-state {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.35rem;
-  font-size: 0.76rem;
+  gap: var(--cf-space-xs);
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
@@ -486,14 +507,14 @@ body {
 .aw-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 0.9rem;
+  gap: var(--cf-space-xl);
   list-style: none;
-  margin: 0 0 1.5rem;
+  margin: 0 0 var(--cf-space-2xl);
   padding: 0;
 }
 
 .aw-tile {
-  padding: 0.95rem 1rem;
+  padding: var(--cf-space-xl);
   background: var(--cf-bg-raised);
   border: 1px solid var(--cf-line);
   /* The status is carried by a 3px edge AS WELL AS the word in the header, never instead of it. */
@@ -517,31 +538,31 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: var(--cf-space-md);
 }
 
 .aw-tile__title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--cf-text-sm);
   font-weight: 600;
 }
 
 .aw-tile__value {
-  margin: 0.45rem 0 0;
-  font-size: 1.3rem;
+  margin: var(--cf-space-sm) 0 0;
+  font-size: var(--cf-text-xl);
   line-height: 1.2;
 }
 
 .aw-tile__detail,
 .aw-tile__reason {
-  margin: 0.4rem 0 0;
-  font-size: 0.82rem;
+  margin: var(--cf-space-xs) 0 0;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-dim);
 }
 
 .aw-tile__upstream {
   color: var(--cf-fg-mute);
-  margin-right: 0.35rem;
+  margin-right: var(--cf-space-xs);
 }
 
 /* An absent figure is a WORD, never a dash and never a zero. */
@@ -552,12 +573,12 @@ body {
 
 .aw-absent__word {
   color: var(--cf-fg-mute);
-  font-size: 0.95rem;
+  font-size: var(--cf-text-md);
   font-style: italic;
 }
 
 .aw-absent__why {
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-dim);
 }
 
@@ -568,7 +589,7 @@ body {
 /* The observation time, always beside the figure it belongs to. */
 .aw-asof {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -576,14 +597,14 @@ body {
 
 .aw-note {
   display: flex;
-  gap: 0.6rem;
-  margin: 0 0 1.1rem;
-  padding: 0.75rem 0.9rem;
+  gap: var(--cf-space-md);
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-lg) var(--cf-space-xl);
   border: 1px solid var(--cf-line);
   border-left-width: 3px;
   border-radius: 8px;
   background: var(--cf-bg-raised);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-note--good {
@@ -607,31 +628,31 @@ body {
 .aw-facts {
   margin: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: var(--cf-space-sm);
 }
 
 .aw-facts--tight {
-  gap: 0.25rem;
-  font-size: 0.86rem;
+  gap: var(--cf-space-2xs);
+  font-size: var(--cf-text-sm);
 }
 
 .aw-facts__row {
   display: grid;
   grid-template-columns: minmax(8rem, 12rem) 1fr;
-  gap: 0.75rem;
+  gap: var(--cf-space-lg);
   align-items: baseline;
 }
 
 @media (max-width: 40rem) {
   .aw-facts__row {
     grid-template-columns: 1fr;
-    gap: 0.1rem;
+    gap: var(--cf-space-3xs);
   }
 }
 
 .aw-facts__label {
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -647,8 +668,8 @@ body {
 .aw-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 0 0 1.25rem;
-  font-size: 0.88rem;
+  margin: 0 0 var(--cf-space-xl);
+  font-size: var(--cf-text-sm);
   display: block;
   overflow-x: auto;
 }
@@ -656,22 +677,22 @@ body {
 .aw-table__caption {
   caption-side: top;
   text-align: left;
-  padding-bottom: 0.5rem;
+  padding-bottom: var(--cf-space-sm);
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
 }
 
 .aw-table th,
 .aw-table td {
   text-align: left;
   vertical-align: top;
-  padding: 0.55rem 0.7rem;
+  padding: var(--cf-space-sm) var(--cf-space-lg);
   border-bottom: 1px solid var(--cf-line);
 }
 
 .aw-table thead th {
   color: var(--cf-fg-mute);
-  font-size: 0.74rem;
+  font-size: var(--cf-text-2xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   font-weight: 600;
@@ -684,7 +705,7 @@ body {
 
 .aw-row-sub {
   display: block;
-  font-size: 0.76rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -732,16 +753,16 @@ body {
 
 .aw-code {
   margin: 0;
-  padding: 0.6rem 0.7rem;
+  padding: var(--cf-space-md) var(--cf-space-lg);
   background: var(--cf-bg-sunken);
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
   overflow-x: auto;
 }
 
 .aw-params {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--cf-space-xl);
 }
 
 .aw-params__value {
@@ -752,7 +773,7 @@ body {
 
 .aw-field {
   display: block;
-  margin: 0 0 0.9rem;
+  margin: 0 0 var(--cf-space-xl);
 }
 
 .aw-field--inline {
@@ -766,23 +787,23 @@ body {
 
 .aw-field__label {
   display: block;
-  font-size: 0.84rem;
+  font-size: var(--cf-text-xs);
   font-weight: 600;
-  margin-bottom: 0.2rem;
+  margin-bottom: var(--cf-space-2xs);
 }
 
 .aw-field__hint {
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--cf-space-xs);
   max-width: 70ch;
 }
 
 .aw-field__input {
   width: 100%;
   max-width: 46rem;
-  padding: 0.5rem 0.65rem;
+  padding: var(--cf-space-sm) var(--cf-space-md);
   background: var(--cf-bg-sunken);
   color: var(--cf-fg);
   border: 1px solid var(--cf-line-strong);
@@ -798,8 +819,8 @@ body {
 /* ----------------------------- actions ---------------------------- */
 
 .aw-action {
-  margin: 0 0 1.1rem;
-  padding: 0.95rem 1rem;
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-xl);
   border: 1px solid var(--cf-line);
   border-radius: 10px;
   background: var(--cf-bg-raised);
@@ -810,38 +831,38 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--cf-space-lg);
 }
 
 .aw-action__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--cf-text-md);
 }
 
 .aw-action__summary,
 .aw-action__route {
-  margin: 0.4rem 0 0;
+  margin: var(--cf-space-xs) 0 0;
   color: var(--cf-fg-dim);
-  font-size: 0.88rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-action__consequences,
 .aw-danger__consequences {
-  margin: 0.8rem 0;
-  padding-left: 1.15rem;
+  margin: var(--cf-space-lg) 0;
+  padding-left: var(--cf-space-xl);
   max-width: 74ch;
 }
 
 .aw-action__consequences li,
 .aw-danger__consequences li {
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--cf-space-xs);
 }
 
 /* Not a disabled button. A disabled control reads as "not yet" and gets clicked at; the reason
    takes its place instead. See src/lib/catalogue.ts. */
 .aw-action__blocked {
   color: var(--cf-warn-text);
-  font-size: 0.84rem;
+  font-size: var(--cf-text-xs);
   max-width: 34ch;
 }
 
@@ -849,14 +870,14 @@ body {
 .aw-danger__why {
   margin: 0;
   color: var(--cf-warn-text);
-  font-size: 0.84rem;
+  font-size: var(--cf-text-xs);
 }
 
 /* ----------------------------- the gap (§3.3g) -------------------- */
 
 .aw-blocked {
-  margin: 1rem 0 0;
-  padding: 0.95rem 1rem;
+  margin: var(--cf-space-xl) 0 0;
+  padding: var(--cf-space-xl);
   border: 1px solid var(--cf-line);
   border-radius: 8px;
   background: var(--cf-bg-sunken);
@@ -864,45 +885,45 @@ body {
 
 .aw-blocked__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--cf-text-md);
 }
 
 .aw-blocked__summary {
-  margin: 0.35rem 0 0.7rem;
+  margin: var(--cf-space-xs) 0 var(--cf-space-lg);
   color: var(--cf-fg-dim);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-blocked__verdict {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.9rem;
-  font-size: 0.88rem;
+  gap: var(--cf-space-md);
+  margin: 0 0 var(--cf-space-xl);
+  font-size: var(--cf-text-sm);
 }
 
 .aw-blocked__badge {
   border: 1px solid var(--cf-danger);
   color: var(--cf-danger);
   border-radius: 4px;
-  padding: 0.12rem 0.5rem;
-  font-size: 0.7rem;
+  padding: var(--cf-space-3xs) var(--cf-space-sm);
+  font-size: var(--cf-text-2xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
 .aw-blocked__reason {
-  padding: 0.7rem 0.85rem;
+  padding: var(--cf-space-lg);
   border-left: 3px solid var(--cf-danger);
   background: var(--cf-bg-raised);
   border-radius: 0 6px 6px 0;
 }
 
 .aw-blocked__reason-title {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
+  margin: 0 0 var(--cf-space-xs);
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--cf-fg-mute);
@@ -911,20 +932,20 @@ body {
 .aw-blocked__reason p,
 .aw-blocked__aside {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: var(--cf-text-sm);
   max-width: 78ch;
 }
 
 .aw-blocked__aside {
-  margin-top: 0.9rem;
+  margin-top: var(--cf-space-xl);
   color: var(--cf-fg-dim);
 }
 
 /* ----------------------------- the irreversible gate -------------- */
 
 .aw-danger {
-  margin: 0 0 1.25rem;
-  padding: 1.1rem 1.2rem;
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-xl);
   border: 1px solid var(--cf-danger);
   border-radius: 10px;
   background: var(--cf-bg-raised);
@@ -933,9 +954,9 @@ body {
 .aw-danger__title {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  margin: 0 0 0.4rem;
-  font-size: 1.02rem;
+  gap: var(--cf-space-sm);
+  margin: 0 0 var(--cf-space-xs);
+  font-size: var(--cf-text-md);
   color: var(--cf-danger);
 }
 
@@ -946,7 +967,7 @@ body {
 
 .aw-danger__phrase {
   background: var(--cf-bg-sunken);
-  padding: 0.08rem 0.35rem;
+  padding: var(--cf-space-3xs) var(--cf-space-xs);
   border-radius: 4px;
 }
 
@@ -954,7 +975,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.85rem;
+  gap: var(--cf-space-lg);
 }
 
 .aw-btn--danger {
@@ -968,33 +989,33 @@ body {
 }
 
 .aw-recap {
-  margin: 0 0 0.9rem;
-  padding: 0.7rem 0.85rem;
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-lg);
   background: var(--cf-bg-sunken);
   border-radius: 8px;
 }
 
 .aw-recap__line {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--cf-space-2xs);
 }
 
 .aw-recap__label {
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .aw-decisions {
   display: grid;
-  gap: 1rem;
+  gap: var(--cf-space-xl);
 }
 
 /* ----------------------------- the audit preview ------------------ */
 
 .aw-audit-preview {
-  margin: 0.9rem 0;
-  padding: 0.85rem 1rem;
+  margin: var(--cf-space-xl) 0;
+  padding: var(--cf-space-lg) var(--cf-space-xl);
   border: 1px dashed var(--cf-line-strong);
   border-radius: 8px;
   background: var(--cf-bg-sunken);
@@ -1003,37 +1024,37 @@ body {
 .aw-audit-preview__title {
   display: flex;
   align-items: baseline;
-  gap: 0.45rem;
-  margin: 0 0 0.35rem;
-  font-size: 0.86rem;
+  gap: var(--cf-space-sm);
+  margin: 0 0 var(--cf-space-xs);
+  font-size: var(--cf-text-sm);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--cf-fg-mute);
 }
 
 .aw-audit-preview__lede {
-  margin: 0 0 0.7rem;
-  font-size: 0.84rem;
+  margin: 0 0 var(--cf-space-lg);
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-dim);
   max-width: 74ch;
 }
 
 .aw-audit-preview__list {
   margin: 0;
-  padding-left: 1.15rem;
+  padding-left: var(--cf-space-xl);
   display: grid;
-  gap: 0.8rem;
+  gap: var(--cf-space-lg);
 }
 
 .aw-audit-preview__action {
-  margin: 0 0 0.3rem;
+  margin: 0 0 var(--cf-space-2xs);
   font-weight: 700;
 }
 
 .aw-audit-preview__notes {
-  margin: 0.4rem 0 0;
-  padding-left: 1.05rem;
-  font-size: 0.82rem;
+  margin: var(--cf-space-xs) 0 0;
+  padding-left: var(--cf-space-xl);
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-dim);
   max-width: 74ch;
 }
@@ -1041,28 +1062,28 @@ body {
 /* ----------------------------- chain breaks ----------------------- */
 
 .aw-breaks {
-  margin: 0.5rem 0 0;
+  margin: var(--cf-space-sm) 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.5rem;
+  gap: var(--cf-space-sm);
 }
 
 .aw-breaks__item {
   display: grid;
   grid-template-columns: minmax(9rem, auto) minmax(5rem, auto) 1fr;
-  gap: 0.7rem;
-  padding: 0.55rem 0.7rem;
+  gap: var(--cf-space-lg);
+  padding: var(--cf-space-sm) var(--cf-space-lg);
   border-left: 3px solid var(--cf-danger);
   background: var(--cf-bg-sunken);
   border-radius: 0 6px 6px 0;
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 @media (max-width: 46rem) {
   .aw-breaks__item {
     grid-template-columns: 1fr;
-    gap: 0.15rem;
+    gap: var(--cf-space-3xs);
   }
 }
 
@@ -1109,60 +1130,60 @@ body {
 }
 
 .aw-section {
-  margin: 2rem 0 0.75rem;
-  font-size: 1.05rem;
+  margin: var(--cf-space-3xl) 0 var(--cf-space-lg);
+  font-size: var(--cf-text-md);
 }
 
 .aw-lede {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--cf-space-xl);
   max-width: 46rem;
   color: var(--cf-fg-dim);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.5;
 }
 
 .aw-lede--tight {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--cf-space-sm);
 }
 
 .aw-mono {
   font-family: var(--cf-font-mono, ui-monospace, monospace);
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   overflow-wrap: anywhere;
 }
 
 .aw-unit,
 .aw-stamp {
   color: var(--cf-fg-mute);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-2xs);
 }
 
 /* Absent, said out loud. Never styled as a dash that could be read as a zero. */
 .aw-missing {
   color: var(--cf-fg-mute);
   font-style: italic;
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
 }
 
 .aw-pre {
-  margin: 0.5rem 0;
-  padding: 0.7rem;
+  margin: var(--cf-space-sm) 0;
+  padding: var(--cf-space-lg);
   border-radius: 8px;
   background: var(--cf-bg-sunken);
   font-family: var(--cf-font-mono, ui-monospace, monospace);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-2xs);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .aw-filter {
-  padding: 0.35rem 0.7rem;
+  padding: var(--cf-space-xs) var(--cf-space-lg);
   border-radius: 999px;
   border: 1px solid var(--cf-line-strong);
   background: none;
   color: var(--cf-fg-dim);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   cursor: pointer;
 }
 
@@ -1188,16 +1209,16 @@ body {
 .aw-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.1rem 0.5rem;
+  gap: var(--cf-space-2xs);
+  padding: var(--cf-space-3xs) var(--cf-space-sm);
   border-radius: 999px;
   border: 1px solid var(--cf-line-strong);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-2xs);
   white-space: nowrap;
 }
 
 .aw-pill__glyph {
-  font-size: 0.7rem;
+  font-size: var(--cf-text-2xs);
 }
 
 .aw-pill--live .aw-pill__glyph {
@@ -1216,17 +1237,17 @@ body {
 .aw-rail {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1rem;
+  gap: var(--cf-space-xs) var(--cf-space-xl);
   list-style: none;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--cf-space-xl);
   padding: 0;
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
 }
 
 .aw-rail__step {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--cf-space-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -1248,24 +1269,24 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: var(--cf-space-xl);
+  margin-bottom: var(--cf-space-lg);
 }
 
 .aw-idea__question {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--cf-text-md);
   line-height: 1.4;
   max-width: 48rem;
 }
 
 .aw-idea__facts {
-  margin-bottom: 1rem;
+  margin-bottom: var(--cf-space-xl);
 }
 
 .aw-idea__decide {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: var(--cf-space-xl);
+  padding-top: var(--cf-space-xl);
   border-top: 1px solid var(--cf-line);
 }
 
@@ -1273,8 +1294,8 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: var(--cf-space-sm);
+  margin-top: var(--cf-space-lg);
 }
 
 /* --------------------------- the sources --------------------------- */
@@ -1285,8 +1306,8 @@ body {
  * the eye lands first has made the checkable thing secondary.
  */
 .aw-sources {
-  margin: 1rem 0;
-  padding: 0.75rem 0.9rem;
+  margin: var(--cf-space-xl) 0;
+  padding: var(--cf-space-lg) var(--cf-space-xl);
   border-radius: 8px;
   border: 1px solid var(--cf-accent);
   background: var(--cf-bg-sunken);
@@ -1295,13 +1316,13 @@ body {
 .aw-sources__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--cf-space-xs);
   background: none;
   border: none;
   padding: 0;
   color: var(--cf-fg);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1313,49 +1334,49 @@ body {
 
 .aw-sources__list {
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: var(--cf-space-lg) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: var(--cf-space-lg);
 }
 
 .aw-sources__item {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--cf-space-3xs);
 }
 
 .aw-sources__title {
   color: var(--cf-fg);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
-/* 0.9rem body copy in the accent — the same 4.44:1 defect as `.wt-link` above, same fix. */
+/* `--cf-text-sm` body copy in the accent — the same 4.44:1 defect as `.wt-link` above, same fix. */
 a.aw-sources__title {
   color: var(--cf-accent-hover);
 }
 
 .aw-sources__meta {
   color: var(--cf-fg-mute);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-2xs);
 }
 
 .aw-sources__warn {
-  margin-top: 0.25rem;
+  margin-top: var(--cf-space-2xs);
 }
 
 /* -------------------------- provenance ----------------------------- */
 
 .aw-details {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
+  margin-top: var(--cf-space-lg);
+  font-size: var(--cf-text-sm);
 }
 
 .aw-details > summary {
   cursor: pointer;
   color: var(--cf-fg-dim);
-  padding: 0.25rem 0;
+  padding: var(--cf-space-2xs) 0;
 }
 
 .aw-details > summary:focus-visible {
@@ -1368,12 +1389,12 @@ a.aw-sources__title {
 }
 
 .aw-provenance {
-  margin-top: 0.5rem;
+  margin-top: var(--cf-space-sm);
 }
 
 .aw-field__hint--block {
   display: block;
-  margin: 0.4rem 0;
+  margin: var(--cf-space-xs) 0;
 }
 
 .aw-action--blocked {
@@ -1388,23 +1409,23 @@ a.aw-sources__title {
 /* --------------------------- the choice ---------------------------- */
 
 .aw-choice {
-  margin: 1rem 0 0;
-  padding: 0.75rem 0.9rem;
+  margin: var(--cf-space-xl) 0 0;
+  padding: var(--cf-space-lg) var(--cf-space-xl);
   border: 1px solid var(--cf-line-strong);
   border-radius: 8px;
 }
 
 .aw-choice__legend {
-  padding: 0 0.35rem;
-  font-size: 0.85rem;
+  padding: 0 var(--cf-space-xs);
+  font-size: var(--cf-text-sm);
   font-weight: 600;
 }
 
 .aw-choice__option {
   display: flex;
   align-items: baseline;
-  gap: 0.6rem;
-  padding: 0.5rem 0.4rem;
+  gap: var(--cf-space-md);
+  padding: var(--cf-space-sm) var(--cf-space-xs);
   border-radius: 6px;
   cursor: pointer;
 }
@@ -1421,26 +1442,26 @@ a.aw-sources__title {
 
 .aw-choice__word {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--cf-text-md);
   min-width: 3rem;
 }
 
 .aw-choice__detail {
   color: var(--cf-fg-dim);
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-choice__caveat {
-  margin: 0.5rem 0 0;
+  margin: var(--cf-space-sm) 0 0;
   color: var(--cf-fg-mute);
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
 }
 
 /* --------------------------- the outcome --------------------------- */
 
 .aw-outcome__headline {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
+  margin: 0 0 var(--cf-space-lg);
+  font-size: var(--cf-text-md);
   font-weight: 600;
 }
 
@@ -1449,7 +1470,7 @@ a.aw-sources__title {
 }
 
 .aw-pool__facts {
-  margin-top: 0.9rem;
+  margin-top: var(--cf-space-xl);
 }
 
 .aw-refusal {
@@ -1484,8 +1505,8 @@ a.aw-sources__title {
 .aw-honesty__lists {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.1rem;
-  margin-top: 0.9rem;
+  gap: var(--cf-space-xl);
+  margin-top: var(--cf-space-xl);
 }
 
 /* Stacked on a narrow screen, and "does not protect" stays first — the DOM order is the reading
@@ -1497,8 +1518,8 @@ a.aw-sources__title {
 }
 
 .aw-honesty__heading {
-  margin: 0 0 0.4rem;
-  font-size: 0.82rem;
+  margin: 0 0 var(--cf-space-xs);
+  font-size: var(--cf-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1511,35 +1532,35 @@ a.aw-sources__title {
 
 .aw-honesty__items {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--cf-space-xl);
   display: grid;
-  gap: 0.3rem;
-  font-size: 0.9rem;
+  gap: var(--cf-space-2xs);
+  font-size: var(--cf-text-sm);
 }
 
 .aw-honesty__empty {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--cf-text-sm);
   color: var(--cf-fg-mute);
 }
 
 .aw-honesty__custody {
-  margin-top: 1.1rem;
-  padding-top: 0.9rem;
+  margin-top: var(--cf-space-xl);
+  padding-top: var(--cf-space-xl);
   border-top: 1px solid var(--cf-line);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .aw-honesty__custody p {
-  margin: 0 0 0.6rem;
+  margin: 0 0 var(--cf-space-md);
 }
 
 /* The two environments, beside each other, so a mismatch is seen rather than deduced. */
 .aw-envs__pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 0.6rem 0 0.9rem;
+  gap: var(--cf-space-xl);
+  margin: var(--cf-space-md) 0 var(--cf-space-xl);
 }
 
 @media (max-width: 40rem) {
@@ -1549,7 +1570,7 @@ a.aw-sources__title {
 }
 
 .aw-envs__side {
-  padding: 0.6rem 0.8rem;
+  padding: var(--cf-space-md) var(--cf-space-lg);
   border: 1px solid var(--cf-line);
   border-radius: 8px;
   background: var(--cf-bg-raised);
@@ -1557,7 +1578,7 @@ a.aw-sources__title {
 
 .aw-envs__label {
   display: block;
-  font-size: 0.76rem;
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--cf-fg-mute);
@@ -1565,8 +1586,8 @@ a.aw-sources__title {
 
 .aw-envs__value {
   display: block;
-  margin-top: 0.2rem;
-  font-size: 1.15rem;
+  margin-top: var(--cf-space-2xs);
+  font-size: var(--cf-text-lg);
 }
 
 /*
@@ -1578,15 +1599,15 @@ a.aw-sources__title {
  * filling in.
  */
 .aw-live {
-  margin: 1.25rem 0;
-  padding: 1rem 1.1rem;
+  margin: var(--cf-space-xl) 0;
+  padding: var(--cf-space-xl);
   border: 1px solid var(--cf-danger);
   border-radius: 10px;
   background: var(--cf-bg-raised);
 }
 
 .aw-bounds {
-  margin-top: 1.1rem;
-  padding-top: 0.9rem;
+  margin-top: var(--cf-space-xl);
+  padding-top: var(--cf-space-xl);
   border-top: 1px solid var(--cf-line);
 }

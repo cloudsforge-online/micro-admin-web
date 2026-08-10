@@ -152,12 +152,29 @@ for (const strict of [false, true]) {
   const mode = strict ? 'under StrictMode' : 'plain'
 
   describe(`useMutation runs once per double click — ${mode}`, () => {
+    /*
+     * ── THE 250ms IS A MARGIN, NOT A DELAY, AND IT WAS 30ms ─────────────────────────────────────
+     *
+     * This scenario asserts the busy affordance mid-flight: it settles for 5ms and then requires
+     * "Working…" to be on screen, which is only true while the work below is still running. At
+     * 30ms the margin was 25ms of WALL CLOCK on a machine running this file in parallel with the
+     * rest of the suite — `s.settle(5)` guarantees at least 5ms, never at most. On 2026-08-10 the
+     * sub-nav branch added four mounted scenarios to `test/shell-browser.test.ts`, the suite got
+     * heavier, and this assertion started failing about one run in four: the work had finished and
+     * `busy` had cleared before the settle returned, so the text read "Idle".
+     *
+     * Nothing here is weakened. The proof this file exists for is `box.runs === 1` below, which is
+     * a count and has no clock in it; the affordance assertion is unchanged and still fails if
+     * `busy` is deleted. What changed is the size of the window it is checked in — 245ms instead
+     * of 25ms — which is the difference between a scenario about React state and a scenario about
+     * how busy the machine is. Measured after: 20 consecutive green runs of the full suite.
+     */
     it(`starts one run, not two (${mode})`, async () => {
       const box = { runs: 0 }
       const Probe = (): ReactElement => {
         const m = useMutation(async () => {
           box.runs += 1
-          await new Promise((r) => setTimeout(r, 30))
+          await new Promise((r) => setTimeout(r, 250))
           return 'done'
         }, 'It did not work.')
         return h(
@@ -176,7 +193,7 @@ for (const strict of [false, true]) {
         // Mid-flight the affordance HAS committed — `busy` is still worth setting, it is just not
         // the guard. Asserting it here is what stops a "fix" that deletes `busy` altogether.
         assert.match(s.text(), /Working…/, 'the busy affordance never rendered')
-        await s.settle(60)
+        await s.settle(400)
         assert.equal(box.runs, 1, once('the work', box.runs, 'One press is one run.'))
       })
     })

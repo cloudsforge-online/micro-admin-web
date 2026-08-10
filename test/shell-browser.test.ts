@@ -31,8 +31,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import { withScreen, type Screen } from './dom.ts'
 import { AppShell } from '../src/components/shell.tsx'
+import { ForesightSection } from '../src/components/foresight-section.tsx'
 import { AuthProvider } from '../src/lib/auth.tsx'
-import { NAV } from '../src/lib/routes.ts'
+import { FORESIGHT_NAV, NAV } from '../src/lib/routes.ts'
 import { consoleMeta } from '../src/lib/meta.ts'
 
 const ORIGIN = 'https://admin.cloudsforge.online'
@@ -152,6 +153,107 @@ describe('the navigation survived the shell change', () => {
   it('still marks this console as the current surface, in a word and not only a colour', async () => {
     await withScreen(shellAt('/'), { url: `${ORIGIN}/`, mountedText: PAGE_TEXT }, async (s) => {
       assert.match(s.text(), /Operator/)
+    })
+  })
+})
+
+/*
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE STRIP A READER ACTUALLY MEETS, ASSERTED IN A DOCUMENT.
+ *
+ * This is the assertion the sub-nav adoption needed and did not have. Every other check on the
+ * strip in this repository reads `src/components/shell.tsx` or `src/styles.css` AS TEXT — and the
+ * defect the wave was run for is precisely one that source text cannot see. Ten frontends had
+ * imported a design system, kept a hand-rolled copy of this landmark, and gone green: a grep for
+ * `SubNav` finds the import, a grep for `NavLink` finds the links, and the element on the page is
+ * still the local `<nav className="wt-subnav">` with the local classes on it.
+ *
+ * So this mounts the shell and asks the DOM. It is the only layer at which "the reader gets the
+ * shared strip" is a statement with a truth value.
+ *
+ * The harness boundary from `test/dom.ts` holds: element names, classes, roles and accessible
+ * names — no geometry and no computed style, nothing a second DOM implementation would differ on.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+describe('the section strip is the SHARED one, in the document', () => {
+  it('the landmark the reader meets carries `cf-subnav`, not a private copy', async () => {
+    await withScreen(shellAt('/'), { url: `${ORIGIN}/`, mountedText: PAGE_TEXT }, async (s) => {
+      const strip = s.document.querySelector('nav.cf-subnav')
+      assert.ok(strip, 'no element with class cf-subnav — the shell is drawing its own strip')
+      assert.equal(strip.getAttribute('aria-label'), 'Sections')
+      assert.ok(
+        strip.querySelector('.cf-subnav__inner'),
+        'the shared landmark has no shared scroll container inside it',
+      )
+      assert.equal(
+        s.document.querySelectorAll('[class*="wt-subnav__"]').length,
+        0,
+        'a local sub-nav element is still on the page',
+      )
+    })
+  })
+
+  it('every section link carries `cf-subnav__link`', async () => {
+    await withScreen(shellAt('/'), { url: `${ORIGIN}/`, mountedText: PAGE_TEXT }, async (s) => {
+      const strip = s.document.querySelector('nav.cf-subnav')
+      assert.ok(strip)
+      const links = [...strip.querySelectorAll('a')]
+      assert.equal(links.length, NAV.length, 'the strip does not hold every section')
+      for (const link of links) {
+        assert.ok(
+          link.classList.contains('cf-subnav__link'),
+          `${link.getAttribute('href')} is not on the shared link class`,
+        )
+        assert.equal(
+          link.classList.contains('is-active'),
+          false,
+          'the local current-section modifier is still being written',
+        )
+      }
+    })
+  })
+
+  it('marks exactly one section current, with the shared modifier', async () => {
+    // One, and the right one. `react-router`'s NavLink owns the active state — what this checks is
+    // that the class it is told to write is the one the shared stylesheet draws.
+    await withScreen(shellAt('/audit'), { url: `${ORIGIN}/audit`, mountedText: PAGE_TEXT }, async (s) => {
+      const current = [...s.document.querySelectorAll('.cf-subnav__link--current')]
+      assert.equal(current.length, 1, 'the strip marks no section, or more than one')
+      assert.equal(current[0]?.getAttribute('href'), '/audit')
+    })
+  })
+
+  it('the Foresight section gets the same strip, with the local modifier around it', async () => {
+    /*
+     * The second navigation, one level down. `.wt-subnav--section` is the one rule this console
+     * keeps — it un-sticks the strip so two sticky rows cannot stack — and it has to reach the
+     * shared element by DESCENT, because `SubNav` takes no className. If the wrapper were dropped
+     * the section nav would pin itself to `var(--cf-bar-h)` on top of the console's own.
+     */
+    const section = h(
+      MemoryRouter,
+      { initialEntries: ['/foresight'] },
+      h(
+        Routes,
+        null,
+        h(Route, {
+          path: '/foresight',
+          element: h(ForesightSection, null),
+          children: [h(Route, { key: 'i', index: true, element: h('p', null, PAGE_TEXT) })],
+        } as never),
+      ),
+    )
+    await withScreen(section, { url: `${ORIGIN}/foresight`, mountedText: PAGE_TEXT }, async (s) => {
+      const wrapper = s.document.querySelector('.wt-subnav--section')
+      assert.ok(wrapper, 'the local modifier is gone, so the second strip would be sticky too')
+      const strip = wrapper.querySelector('nav.cf-subnav')
+      assert.ok(strip, 'the section nav is not the shared strip')
+      assert.equal(strip.getAttribute('aria-label'), 'Foresight')
+      const links = [...strip.querySelectorAll('a')]
+      assert.equal(links.length, FORESIGHT_NAV.length)
+      for (const link of links) {
+        assert.ok(link.classList.contains('cf-subnav__link'), `${link.textContent} is off-class`)
+      }
     })
   })
 })

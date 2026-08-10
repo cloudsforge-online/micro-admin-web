@@ -56,7 +56,19 @@ const gate = read('src/lib/gate.ts')
 const auditPreview = read('src/components/audit-preview.tsx')
 const tone = read('src/components/tone.tsx')
 const shell = read('src/components/shell.tsx')
+const foresightSection = read('src/components/foresight-section.tsx')
 const styles = read('src/styles.css')
+
+/**
+ * The design system's stylesheet as this bundle actually consumes it.
+ *
+ * `dist/`, not `src/`, because that is what `main.tsx` imports and therefore what ships. Reading
+ * the source would let a rule pass here that never reaches a reader.
+ */
+const uiCss = read('node_modules/@cloudsforge/ui/dist/ui.css')
+
+/** `src/styles.css` with its comments removed — this file explains its own rules at length. */
+const cssDeclarations = styles.replace(/\/\*[\s\S]*?\*\//g, '')
 
 const PAGES: ReadonlyArray<[string, string]> = [
   ['estate', estate],
@@ -862,7 +874,181 @@ describe('the shell', () => {
     assert.match(shell, /NAV\.map/)
   })
 
+  /*
+   * FOLLOWED INTO ui.css RATHER THAN DELETED.
+   *
+   * This used to read `assert.match(styles, /--cf-bar-h/)`, and after the sub-nav moved into
+   * @cloudsforge/ui that assertion would still have passed — the token is named in a COMMENT in
+   * this repository's stylesheet now, and nowhere else. A check that a comment can satisfy is not
+   * a check. The fact it was written to protect is unchanged and still worth protecting: the strip
+   * docks at the bar's own height token rather than at a pixel count copied out of it, so the two
+   * cannot drift. It just lives one repository over, and so does the assertion.
+   */
   it('docks the sub-nav at the bar’s own height token', () => {
-    assert.match(styles, /--cf-bar-h/)
+    const rule = /\.cf-subnav \{([^}]*)\}/.exec(uiCss)?.[1] ?? ''
+    assert.match(rule, /top: var\(--cf-bar-h\)/, 'the shared strip no longer docks at the bar')
+    assert.doesNotMatch(rule, /top:\s*\d/, 'the shared strip docks at a literal offset')
+  })
+})
+
+/* ══════════════════ the sub-nav is the design system's, not a copy ══════════════════ */
+
+/*
+ * The shape `micro-explorer-web/test/tokens.test.ts` uses for the form controls: assert BOTH that
+ * the shared thing exists AND that the local copy is gone. Either half alone passes in the state
+ * nobody wants — a repository that imports the component and keeps its own rules beside it, which
+ * is where the next reader edits the dead copy and cannot work out why nothing moves.
+ */
+describe('the sub-nav is the design system’s, and there is no second copy of it here', () => {
+  it('both navigations in this console are `SubNav` from @cloudsforge/ui', () => {
+    for (const [name, source] of [
+      ['the shell', shell],
+      ['the Foresight section', foresightSection],
+    ] as const) {
+      const imported = /import \{([^}]*)\} from '@cloudsforge\/ui'/.exec(source)?.[1] ?? ''
+      assert.ok(imported.includes('SubNav'), `${name} does not import SubNav`)
+      assert.match(source, /<SubNav label="/, `${name} does not render SubNav`)
+      // The local ELEMENT and its parts. `className="wt-subnav--section"` is allowed and is
+      // asserted separately below: it is the wrapper the modifier is applied through, not a strip.
+      const source_ = withoutComments(source)
+      assert.doesNotMatch(source_, /wt-subnav__/, `${name} still writes the local strip's parts`)
+      assert.doesNotMatch(source_, /"wt-subnav"/, `${name} still writes the local strip`)
+    }
+  })
+
+  it('names its two landmarks apart, so a screen reader can tell them apart', () => {
+    // Two <nav>s with the same accessible name are two landmarks a reader cannot choose between,
+    // and this console is the only surface in the estate that has two.
+    assert.match(shell, /<SubNav label="Sections">/)
+    assert.match(foresightSection, /<SubNav label="Foresight">/)
+  })
+
+  it('marks the current section with the shared modifier, not the local one', () => {
+    for (const [name, source] of [
+      ['the shell', shell],
+      ['the Foresight section', foresightSection],
+    ] as const) {
+      assert.match(source, /cf-subnav__link--current/, `${name} does not mark the current link`)
+      assert.doesNotMatch(source, /' is-active'/, `${name} still uses the local modifier`)
+    }
+  })
+
+  it('the shared classes it depends on exist in the stylesheet that ships', () => {
+    for (const selector of [
+      '.cf-subnav {',
+      '.cf-subnav__inner {',
+      '.cf-subnav__link {',
+      '.cf-subnav__link:hover {',
+      '.cf-subnav__link--current {',
+      '.cf-subnav__link:focus-visible {',
+    ]) {
+      assert.ok(uiCss.includes(selector), `ui.css does not define ${selector.slice(0, -2)}`)
+    }
+  })
+
+  it('and it keeps the three things the local copy got right', () => {
+    // Not a regression check on this repository — a check that the rule taken IN is at least as
+    // good as the rule taken OUT. Three channels for the current section, a focus ring that is not
+    // clipped by the scroll container, and the sticky offset the test above already follows.
+    const current = /\.cf-subnav__link--current \{([^}]*)\}/.exec(uiCss)?.[1] ?? ''
+    assert.match(current, /color:/)
+    assert.match(current, /font-weight: 600/)
+    assert.match(current, /border-bottom-color/)
+    assert.match(uiCss, /\.cf-subnav__link:focus-visible \{[^}]*outline-offset: -2px/s)
+  })
+
+  it('and it fixes the two things the local copy had lost', () => {
+    // `max-width: 76rem` was 1216px against the bar's 1200, and the strip did not scroll.
+    assert.match(uiCss, /\.cf-subnav__inner \{[^}]*max-width: var\(--cf-max-w\)/s)
+    assert.match(uiCss, /\.cf-subnav__inner \{[^}]*overflow-x: auto/s)
+    assert.match(uiCss, /\.cf-subnav__link \{[^}]*white-space: nowrap/s)
+  })
+
+  it('the local `.wt-subnav__*` rules are DELETED, not left beside the shared ones', () => {
+    const survivors = [...cssDeclarations.matchAll(/\.wt-subnav[a-z_-]*/g)].map((m) => m[0])
+    assert.deepEqual(
+      [...new Set(survivors)],
+      ['.wt-subnav--section'],
+      'a local copy of the sub-nav is still declared in src/styles.css',
+    )
+  })
+
+  it('the one modifier that stays is LAYERED on the shared classes, not a fork of them', () => {
+    // `.wt-subnav--section` un-sticks the strip and nothing else. It reaches the shared element by
+    // descent, because `SubNav` deliberately takes no className.
+    assert.match(cssDeclarations, /\.wt-subnav--section \.cf-subnav \{[^}]*position: static/s)
+    assert.match(cssDeclarations, /\.wt-subnav--section \.cf-subnav__inner \{/)
+    assert.match(foresightSection, /<div className="wt-subnav--section">/)
+  })
+
+  it('`is-active` survives only where it is a genuine second user', () => {
+    // Enumerated rather than banned. `.aw-filter.is-active` is a real control with a real state,
+    // and a blanket "the modifier is gone" assertion would have to be weakened the first time
+    // somebody reads it — which is how a guard becomes a comment.
+    const owners = [...cssDeclarations.matchAll(/\.([a-z-]+)\.is-active/g)].map((m) => m[1])
+    assert.deepEqual([...new Set(owners)].sort(), ['aw-filter'])
+  })
+})
+
+/* ══════════════════ the type and spacing scales ══════════════════ */
+
+/*
+ * The header of `src/styles.css` says "EVERY COLOUR, SPACE AND FONT IS A TOKEN", and until
+ * 2026-08-10 only the colour third of that was true and only the colour third was pinned — by the
+ * "names no literal colour" test above. This file spent 75 literal `font-size` declarations and
+ * not one token underneath that sentence. The other two thirds are asserted here with the same
+ * force, so the claim in the header is a rule rather than an aspiration.
+ */
+describe('the stylesheet spends the estate’s scales rather than approximating them', () => {
+  it('names no literal font size: every one is a `--cf-text-*` step', () => {
+    const literals = [...cssDeclarations.matchAll(/font-size:\s*([^;]+);/g)]
+      .map((m) => (m[1] ?? '').trim())
+      .filter((value) => !value.startsWith('var(--cf-text-'))
+    assert.deepEqual(literals, [], `literal font sizes in styles.css: ${literals.join(', ')}`)
+  })
+
+  /*
+   * Spacing is the same rule with a stated exception list, and the list is asserted POSITIVELY —
+   * exactly these three lengths, no more and no fewer. A "no literals except…" check written as a
+   * filter is satisfied by adding to the filter; written as an enumeration, a fourth literal fails
+   * and has to be argued for, and deleting one of the three fails too.
+   */
+  it('spends `--cf-space-*` for rhythm, with exactly three lengths left as literals', () => {
+    const found: string[] = []
+    const declaration =
+      /(?:^|\n)\s*(gap|row-gap|column-gap|margin[a-z-]*|padding[a-z-]*):\s*([^;]+);/g
+    for (const m of cssDeclarations.matchAll(declaration)) {
+      for (const length of (m[2] ?? '').matchAll(/-?\d*\.?\d+(?:rem|px|em)\b/g)) {
+        found.push(`${m[1]}: ${length[0]}`)
+      }
+    }
+    assert.deepEqual(
+      found.sort(),
+      [
+        // The run-out under the last panel, 64px. The scale tops out at 32.
+        'padding: 4rem',
+        // The empty/failed/forbidden inset, 48px. Same reason.
+        'padding: 3rem',
+        // The screen-reader-only clip trick. A negative length is not a spacing step.
+        'margin: -1px',
+      ].sort(),
+      'a spacing literal has come back into src/styles.css',
+    )
+  })
+
+  it('takes the page measure from `--cf-max-w`, so the page and the chrome share an edge', () => {
+    assert.match(cssDeclarations, /\.wt-main \{[^}]*max-width: var\(--cf-max-w\)/s)
+    assert.equal(
+      cssDeclarations.includes('76rem'),
+      false,
+      '76rem is 1216px and the bar and footer are 1200 — the page would sit 8px proud on each side',
+    )
+  })
+
+  it('adds no token of its own, and invents no step', () => {
+    // The sweep moves literals ONTO the estate's scales. A `--cf-`-shaped custom property declared
+    // here would be this console quietly forking the design system in the name of adopting it.
+    const declared = [...cssDeclarations.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1])
+    assert.deepEqual(declared, [], `src/styles.css declares ${declared.join(', ')}`)
   })
 })
