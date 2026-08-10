@@ -37,7 +37,7 @@ import {
   type EngagementPolicies,
   type EngagementReport,
 } from '../lib/admin.ts'
-import { asOfLabel, timestamp } from '../lib/format.ts'
+import { asOfLabel, formatWei, groupDigits, timestamp } from '../lib/format.ts'
 import { previewEngagementLower } from '../lib/gate.ts'
 import { useMutation } from '../lib/mutation.ts'
 import { useResource } from '../lib/resource.ts'
@@ -47,16 +47,21 @@ import { AsOf } from '../components/tone.tsx'
 import { ReversibleAction } from '../components/irreversible.tsx'
 
 /**
- * Shards, grouped for a human, from a decimal string.
+ * Wei as EMBER, EXACTLY — every digit, with only the trailing zeros dropped.
  *
- * The wire carries decimal strings because a Shard amount is a `bigint` in every service that
- * touches it (`docs/ecosystem/21 §2` — "denominated in Shards"), and a JSON number near an amount
- * is the defect this estate does not have. So the grouping is done on the STRING: no `Number()`,
- * no rounding, and an amount too large for a double still renders exactly.
+ * The wire carries decimal strings because these amounts are `bigint` in every service that
+ * touches them (`docs/ecosystem/21 §2` — "bounded, disclosed, and denominated in EMBER"), and a
+ * JSON number near an amount is the defect this estate does not have. `formatWei` is string and
+ * bigint work throughout, so an amount too large for a double still renders exactly.
+ *
+ * `maxDecimals: 18` rather than the pool screens' 4: a pool is a magnitude an operator eyeballs,
+ * while this screen is 21 §4's reconstruction of a programme — a treasury figure quietly cut
+ * three decimals short is a figure that will not add up against the ledger it was read from.
+ *
+ * The unit was Shards until 2026-08-10 (micro-org#226); see `lib/admin.ts`.
  */
-export function groupDigits(value: string): string {
-  if (!/^\d+$/.test(value)) return value
-  return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+function ember(value: string): string {
+  return formatWei(value, { maxDecimals: 18 }) ?? value
 }
 
 /** Basis points as a percentage, without floating point: 250 → "2.5%". */
@@ -135,8 +140,11 @@ function EngagementBody({
   policies: EngagementPolicies
   onDone: () => void
 }) {
-  const shardsOf = (balances: readonly { assetCode: string; amount: string }[]): string =>
-    balances.find((b) => b.assetCode === 'SHARD')?.amount ?? '0'
+  // EMBER, and only EMBER: the ledger keys an account on (subject, asset_code, purpose), so a
+  // balance in any other asset under this subject is a DIFFERENT account and adding it here would
+  // report two treasuries as one. There has never been more than the one (micro-org#226).
+  const emberOf = (balances: readonly { assetCode: string; amount: string }[]): string =>
+    balances.find((b) => b.assetCode === 'EMBER')?.amount ?? '0'
 
   return (
     <>
@@ -151,16 +159,16 @@ function EngagementBody({
           <div className="aw-facts__row">
             <dt className="aw-facts__label">{report.treasury.subject}</dt>
             <dd className="aw-facts__value cf-num">
-              <strong>{groupDigits(shardsOf(report.treasury.balances))}</strong> Shards
+              <strong>{ember(emberOf(report.treasury.balances))}</strong> EMBER
             </dd>
           </div>
           {report.services.map((service) => (
             <div className="aw-facts__row" key={service.subject}>
               <dt className="aw-facts__label">└ {service.subject}</dt>
               <dd className="aw-facts__value cf-num">
-                <strong>{groupDigits(shardsOf(service.balances))}</strong> Shards
-                {report.spendShardsByService[service.service] !== undefined && (
-                  <> · {groupDigits(report.spendShardsByService[service.service]!)} transferred in</>
+                <strong>{ember(emberOf(service.balances))}</strong> EMBER
+                {report.spendWeiByService[service.service] !== undefined && (
+                  <> · {ember(report.spendWeiByService[service.service]!)} transferred in</>
                 )}
               </dd>
             </div>
@@ -182,13 +190,13 @@ function EngagementBody({
             key={policy.service}
             service={policy.service}
             what="the transfer cap"
-            currentLabel={`${groupDigits(policy.transferCapShards)} Shards`}
-            current={policy.transferCapShards}
-            ceilingLabel={`${groupDigits(policies.ceilings.transferCapShards)} Shards`}
+            currentLabel={`${ember(policy.transferCapWei)} EMBER`}
+            current={policy.transferCapWei}
+            ceilingLabel={`${ember(policies.ceilings.transferCapWei)} EMBER`}
             lastChangedBy={policy.updatedBy}
             lastChangedAt={policy.updatedAt}
             onDone={onDone}
-            toBody={(next) => ({ transferCapShards: next })}
+            toBody={(next) => ({ transferCapWei: next })}
           />
         ))}
       </section>
@@ -212,6 +220,7 @@ function EngagementBody({
           onDone={onDone}
           toBody={(next) => ({ recycleBps: next })}
           unit="basis points"
+          inEmber={false}
         />
       </section>
 
@@ -228,7 +237,7 @@ function EngagementBody({
             <thead>
               <tr>
                 <th scope="col">service</th>
-                <th scope="col">Shards</th>
+                <th scope="col">EMBER</th>
                 <th scope="col">state</th>
                 <th scope="col">ledger entry</th>
                 <th scope="col">approval</th>
@@ -238,7 +247,7 @@ function EngagementBody({
               {report.transfers.map((t) => (
                 <tr key={t.id}>
                   <td>{t.service}</td>
-                  <td className="cf-num">{groupDigits(t.amountShards)}</td>
+                  <td className="cf-num">{ember(t.amountWei)}</td>
                   <td>{t.state}</td>
                   {/* A posted transfer names the entry that moved it; the schema makes the pair
                       one fact, so a blank here can only mean "still in flight". */}
@@ -272,7 +281,8 @@ function CapRow({
   lastChangedAt,
   onDone,
   toBody,
-  unit = 'Shards',
+  unit = 'wei',
+  inEmber = true,
 }: {
   service: string
   what: string
@@ -284,13 +294,16 @@ function CapRow({
   onDone: () => void
   toBody: (next: string) => Record<string, string>
   unit?: string
+  /** Does a typed figure mean wei? The fee-recycle share is basis points and does not. */
+  inEmber?: boolean
 }) {
   const { operator } = useSession()
   const [next, setNext] = useState('')
 
   const wellFormed = /^\d+$/.test(next)
-  // Compared as BIGINT, never as a Number: a Shard cap can exceed 2^53 and a comparison that has
-  // been through a double is a comparison against a number nobody typed.
+  // Compared as BIGINT, never as a Number: a cap in wei is routinely past 2^53 — the ceiling
+  // alone is 4e25 — and a comparison that has been through a double is a comparison against a
+  // number nobody typed.
   const isLower = wellFormed && BigInt(next) < BigInt(current)
   const disabledReason = !wellFormed
     ? `Type the new ${unit} value.`
@@ -326,7 +339,7 @@ function CapRow({
           service,
           what,
           from: currentLabel,
-          to: wellFormed ? `${groupDigits(next)} ${unit}` : '(not set)',
+          to: wellFormed ? `${groupDigits(next)} ${unit}${inEmber ? ` (${ember(next)} EMBER)` : ''}` : '(not set)',
         }),
       ]}
       runLabel="Lower"
@@ -364,6 +377,13 @@ function CapRow({
           inputMode="numeric"
           placeholder={current}
         />
+        {/* The field takes the WIRE unit, because that is what the schema stores and what the
+            refusal messages quote. An operator who types the EMBER figure by mistake would be
+            typing something 1e18 too small — which is a LOWER value, so nothing would refuse it.
+            The echo is how they see that before they press the button, not after. */}
+        {inEmber && wellFormed && (
+          <span className="aw-field__hint cf-num">= {ember(next)} EMBER</span>
+        )}
       </label>
     </ReversibleAction>
   )

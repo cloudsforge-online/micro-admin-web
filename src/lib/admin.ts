@@ -860,10 +860,20 @@ export function retractBroadcast(id: string, opts: Signal = {}): Promise<{ broad
 
 /* ══════════════════════════ the engagement treasury — docs/ecosystem/21 ══════════════════════ */
 
-/** `admin-api/src/engagement.ts` — amounts are DECIMAL STRINGS on the wire, never JSON numbers. */
+/**
+ * `admin-api/src/engagement.ts` — amounts are DECIMAL STRINGS on the wire, never JSON numbers.
+ *
+ * **The unit is EMBER wei, and it was Shards until 2026-08-10** (micro-org#226, admin-api
+ * migration 13). `SHARD` was retired on 2026-08-04 while the account this programme spends from is
+ * funded in EMBER by `micro-billing`, so `transferCapShards`, `amountShards` and
+ * `spendShardsByService` became `transferCapWei`, `amountWei` and `spendWeiByService`. The fields
+ * were RENAMED rather than reinterpreted on purpose: a console reading a wei figure off a field
+ * named for Shards would draw a number eighteen orders of magnitude out, and a rename makes that
+ * read fail to compile here instead.
+ */
 export interface EngagementPolicy {
   readonly service: string
-  readonly transferCapShards: string
+  readonly transferCapWei: string
   readonly seedPerMarketWei: string | null
   readonly seedPerDayWei: string | null
   readonly lastChangeApprovalId: string | null
@@ -880,7 +890,7 @@ export interface FeeRecyclePolicy {
 
 /** The schema ceilings, served so this console renders the bounds rather than inventing them. */
 export interface EngagementCeilings {
-  readonly transferCapShards: string
+  readonly transferCapWei: string
   readonly seedPerMarketWei: string
   readonly seedPerDayWei: string
   readonly feeRecycleBps: number
@@ -904,7 +914,7 @@ export interface AccountBalance {
 export interface EngagementTransfer {
   readonly id: string
   readonly service: string
-  readonly amountShards: string
+  readonly amountWei: string
   readonly approvalId: string
   readonly ledgerEntryId: string | null
   readonly state: 'posting' | 'posted'
@@ -919,7 +929,7 @@ export interface EngagementReport {
     readonly subject: string
     readonly balances: readonly AccountBalance[]
   }>
-  readonly spendShardsByService: Readonly<Record<string, string>>
+  readonly spendWeiByService: Readonly<Record<string, string>>
   readonly transfers: readonly EngagementTransfer[]
   readonly policies: readonly EngagementPolicy[]
   readonly feeRecycle: FeeRecyclePolicy
@@ -958,7 +968,7 @@ export function loadEngagementReport(opts: Signal = {}): Promise<EngagementRepor
  * per-service cap.
  */
 export interface PolicyLowerInput {
-  readonly transferCapShards?: string
+  readonly transferCapWei?: string
   readonly seedPerMarketWei?: string | null
   readonly seedPerDayWei?: string | null
   readonly recycleBps?: string
