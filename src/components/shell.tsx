@@ -17,6 +17,7 @@ import {
   CookieBanner,
   MainRegion,
   SkipLink,
+  SubNav,
 } from '@cloudsforge/ui'
 import { applyHead } from '@cloudsforge/ui/seo'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -56,23 +57,45 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         rightSlot={<span className="aw-opmark">Operator</span>}
       />
       {/*
-        The sub-nav is sticky at exactly `var(--cf-bar-h)` — the bar's own height token, not a
-        number copied out of it. When the bar's height changes, this moves with it.
+        The sub-nav is `SubNav` from @cloudsforge/ui, and the local `.wt-subnav*` rules are deleted
+        rather than left beside it. It is still sticky at exactly `var(--cf-bar-h)` — the bar's own
+        height token, not a number copied out of it — because that is one of the things the shared
+        rule kept.
+
+        WHAT IT REPLACES. Measured 2026-08-10: ten frontends declared this strip in their own
+        stylesheet under six class prefixes, from what was plainly one original that had been copied
+        and then edited in place; the census is in `ui/packages/ui/src/subnav.test.ts`. This copy
+        was the closest of the ten to the original and still carried two of the three drifts. It set
+        `max-width: 76rem` — 1216px against the 1200px `.cf-bar__inner` takes from `--cf-max-w` — so
+        the second row of the header sat 8px proud of the first on each side, which is the width of
+        a defect that never gets reported and never gets fixed. And it did not scroll: no
+        `overflow-x` and no `white-space: nowrap`, so the ten sections wrapped or clipped on a phone
+        rather than scrolling sideways. Its gap, gutter, link padding and type were literals.
+
+        The links stay here, and that is the component's own argument: routing is react-router's
+        `NavLink`, which owns the active state, and the design system does not depend on
+        react-router. What moved is the STRIP — the sticky offset, the measure, the scroll behaviour
+        and the type.
+
+        The `label` keeps this console's own wording. Two `<nav>` landmarks with the same accessible
+        name are two landmarks a screen reader user cannot tell apart, and this console has two of
+        them — "Sections" here and "Foresight" one level down in `foresight-section.tsx` — so the
+        wording is deliberately per-landmark and was not homogenised with the strip.
       */}
-      <nav className="wt-subnav" aria-label="Sections">
-        <div className="wt-subnav__inner">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => `wt-subnav__link${isActive ? ' is-active' : ''}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      <SubNav label="Sections">
+        {NAV.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `cf-subnav__link${isActive ? ' cf-subnav__link--current' : ''}`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </SubNav>
       <DocumentMeta />
       {/*
         `MainRegion` rather than a hand-written `<main>`: it sets `id={MAIN_ID}` and `tabIndex={-1}`
