@@ -37,6 +37,7 @@ import { BroadcastsPage } from './pages/broadcasts.tsx'
 import { EstatePage } from './pages/estate.tsx'
 import { EngagementPage } from './pages/engagement.tsx'
 import { FlagsPage } from './pages/flags.tsx'
+import { MailPage } from './pages/mail.tsx'
 import { NotFoundPage } from './pages/not-found.tsx'
 import { SupportPage } from './pages/support.tsx'
 import { CategoriesPage } from './pages/foresight/categories.tsx'
@@ -107,6 +108,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <EngagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="mail"
+              element={
+                <ProtectedRoute>
+                  <MailPage />
                 </ProtectedRoute>
               }
             />
