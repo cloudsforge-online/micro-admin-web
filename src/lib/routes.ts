@@ -44,6 +44,10 @@ export const ROUTES: readonly ConsoleRoute[] = [
   // correlation ids their history hangs off, and Audit reads one of those threads. The pivot is
   // the half that did not exist, and it is why this is not a second copy of the audit screen.
   { path: 'support', label: 'Support', wildcard: false },
+  // What was sent to one person and did it arrive — the delivery half of the support question
+  // above. A separate page because its query axis is a RECIPIENT (address or user id), not a
+  // correlation id, and because resending is an action support's read-only screen must not grow.
+  { path: 'mail', label: 'Mail', wildcard: false },
   // The engagement treasury — docs/ecosystem/21 §6. The owner's requirement was that this be
   // "manageable from the admin panel", so the caps are here rather than only in curl. The screen
   // is a VIEW of the actions, never the mechanism: §6 is explicit that the catalogue remains
