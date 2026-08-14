@@ -51,6 +51,7 @@ import {
   type CloudsForgeHosts,
   type SurfaceKey,
 } from '@cloudsforge/ui'
+import { viewedHosts, viewedSurfaceUrl } from './viewed.ts'
 
 /**
  * The surface this console IS, and whose API it calls.
@@ -178,10 +179,18 @@ export function hosts(): CloudsForgeHosts {
   return cloudsforgeHosts()
 }
 
-/** The API base, resolved now. Call it per request; never cache it in a module constant. */
+/**
+ * The API base, resolved now. Call it per request; never cache it in a module constant.
+ *
+ * `viewedHosts()` rather than `cloudsforgeHosts()` is the in-place network view (micro-org#459).
+ * It returns the map it was given, unchanged, until the reader picks the other network in the bar,
+ * and the sibling estate's origins after that. An operator reading the testnet console from the
+ * mainnet address bar is the point: the two estates have separate administrators and separate
+ * data, and the amber band says which one is on screen.
+ */
 export function apiBase(): string {
   const origin = typeof window === 'undefined' ? '' : window.location.origin
-  return resolveApiBase(origin, cloudsforgeHosts(), PRODUCT)
+  return resolveApiBase(origin, viewedHosts(), PRODUCT)
 }
 
 /**
@@ -198,11 +207,16 @@ export function apiBase(): string {
  * shape these requests ever take, which is also what makes it assertable in a test rather than
  * dependent on where the suite pretends to be served from.
  *
- * Called per request, like `apiBase()`: `cloudsforgeHosts()` reads `window.location.hostname`
- * every time, and a module constant would freeze the apex at import.
+ * Called per request, like `apiBase()`: the registry reads `window.location.hostname` every time,
+ * and a module constant would freeze the apex at import.
+ *
+ * `viewedSurfaceUrl` rather than `cloudsforgeHosts()` for the same reason `apiBase()` reads
+ * `viewedHosts()`: a console showing testnet must ask the TESTNET foresight service, or the
+ * markets listed would be the mainnet ones under an amber band that says otherwise. It answers
+ * identically until the reader touches the switcher.
  */
 export function foresightApiBase(): string {
-  return cloudsforgeHosts()[FORESIGHT_SURFACE]
+  return viewedSurfaceUrl(FORESIGHT_SURFACE)
 }
 
 /** The page origin, or a stable placeholder when there is no document (tests, prerender). */
