@@ -10,7 +10,7 @@
  * colour alone: Admin's clay (#c2704f) is a warm mid-tone that has no reserved meaning in this
  * estate, and nothing in this console may depend on the accent to say what it is.
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CloudsForgeBar,
   CloudsForgeFooter,
@@ -25,8 +25,13 @@ import { PRODUCT } from '../lib/hosts.ts'
 import { consoleMeta } from '../lib/meta.ts'
 import { NAV } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
+import { setViewedNetwork, viewedNetwork, type ViewedNetwork } from '../lib/viewed.ts'
 
 export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
+  // The viewed network: in-tab memory, defaulting to the hostname's own (micro-org#459).
+  // `setViewedNetwork` runs first in the handler below so the remounted tree reads the new value
+  // on its very first render.
+  const [viewed, setViewed] = useState<ViewedNetwork>(viewedNetwork())
   const { account, operator, signIn, signOut } = useSession()
 
   return (
@@ -49,12 +54,28 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         to.
       */}
       <SkipLink>Skip to the page</SkipLink>
+      {/*
+        In-app network context (micro-org#459, the combined view). The reader's choice lives in
+        `lib/viewed.ts` — module memory, never storage — and the `key` on the Outlet below is the
+        refetch mechanism: switching remounts the page tree, and `apiBase()` reads `viewedHosts()`,
+        so the same page re-reads itself from the other estate WITHOUT going anywhere. The band and
+        the switcher both follow the selection, so testnet data under a mainnet address bar is
+        never unmarked. The bar also stamps `?net=` onto its product links, which is what carries
+        the choice across a product switch — every surface is its own origin, so nothing else can.
+      */}
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
         onSignIn={() => signIn()}
         onSignOut={signOut}
         rightSlot={<span className="aw-opmark">Operator</span>}
+        networkSwitch={{
+          selected: viewed,
+          onSelect: (n) => {
+            setViewedNetwork(n)
+            setViewed(n)
+          },
+        }}
       />
       {/*
         The sub-nav is `SubNav` from @cloudsforge/ui, and the local `.wt-subnav*` rules are deleted
@@ -140,7 +161,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
             you will find out at the request rather than before it.
           </p>
         )}
-        <Outlet />
+        <Outlet key={viewed} />
       </MainRegion>
 
       {/*
