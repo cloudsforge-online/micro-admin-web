@@ -78,6 +78,19 @@ export const ROUTES: readonly ConsoleRoute[] = [
   // It is also what keeps the nginx list honest: `foresight` is one entry in one alternation, and
   // the wildcard is what makes a hard refresh on `/foresight/markets/<uuid>` serve the shell.
   { path: 'foresight', label: 'Foresight', wildcard: true },
+  // Forge Worlds — generating and running *Ninety Days After* worlds.
+  //
+  // NOT a wildcard, unlike Foresight: there is one screen, and a world's detail is the game's own
+  // to render rather than this console's. What an operator does to a world from outside — open it,
+  // force a day, change the bots — is four actions on one list, and a `/worlds/<uuid>` address
+  // that only restated the row above it would be a page to maintain for no question it answers.
+  //
+  // WHY IT IS IN THIS CONSOLE AT ALL, when Foresight got folded in from its own admin app and this
+  // has no app to fold: `nda` has no row in `surfaces.ts`, so it has no hostname, no gateway
+  // router and no tunnel ingress rule — the tunnel config enumerates three hostnames by hand and
+  // 404s the rest. The service has been healthy and unreachable for weeks, which is why the title
+  // reads `draft`. admin-api proxies it (`/v1/worlds`), and this is the door.
+  { path: 'worlds', label: 'Worlds', wildcard: false },
 ]
 
 /**
