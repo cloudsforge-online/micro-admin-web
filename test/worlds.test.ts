@@ -330,9 +330,16 @@ describe('the idempotency key names the intention, not the world', () => {
 /* ══════════════════════════ what the operator is shown ══════════════════════════ */
 
 describe('the worlds list', () => {
-  it('tells the operator that the first world is what takes the title out of draft', async () => {
-    // The empty state IS the answer to "why is Ninety Days After a draft". A blank list on the
-    // screen that fixes it would leave the operator exactly where they started.
+  it('tells the operator what an empty list costs a player, and where to fix it', async () => {
+    // This assertion used to be `/draft/`, written against a hint that told the operator generating
+    // a world is "what takes the title out of draft". It is not, and it never was. A title's status
+    // lives in `worlds`' own register — `titles.ts`, moved by the titles route — and `nda` writes
+    // worlds and nothing else. The sentence sent an operator to this page to fix something the page
+    // cannot reach, and the test froze it in place.
+    //
+    // What the empty state can honestly say is what it now says: there is nothing for a player to
+    // open, and the form above is where that changes. So that is what is asserted — the consequence
+    // and the remedy, which is what an empty screen is for.
     await withScreen(
       page(),
       {
@@ -341,7 +348,15 @@ describe('the worlds list', () => {
         routes: { ...ME, 'GET /v1/worlds': { body: { worlds: [] } } },
       },
       async (s) => {
-        assert.match(s.textOf(s.document.body), /draft/)
+        const shown = s.textOf(s.document.body)
+        assert.match(shown, /nothing for a player to open/i, 'the empty state does not say what an empty list costs')
+        assert.match(shown, /generate one here/i, 'the empty state does not point at the form above it')
+        assert.doesNotMatch(
+          shown,
+          /takes the title out of draft/i,
+          'the empty state is back to promising something this page cannot do — a title moves through ' +
+            "the titles route in `worlds`, not by generating an `nda` world",
+        )
       },
     )
   })
