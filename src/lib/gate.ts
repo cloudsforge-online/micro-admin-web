@@ -694,3 +694,81 @@ export function previewEngagementLower(input: {
     ],
   }
 }
+
+/**
+ * The audit rows the four Forge Worlds actions write — **admin-api/src/server.ts**.
+ *
+ * All four are `subject_kind: 'world'` against the world's own id, so an operator searching the
+ * audit for a world finds its whole life in one thread: who generated it, who opened it, who
+ * forced a day, who changed the bots.
+ *
+ * ── WHY THESE ROWS EXIST WHEN nda ALREADY HAS AN OUTBOX ───────────────────────────────────────
+ *
+ * nda emits its own events for what happens INSIDE the game. These record what an operator did to
+ * it from outside, in this console's hash-chained log, against the human named on the bearer — the
+ * two answer different questions, and "who generated that world" is this one's.
+ */
+export function previewWorld(
+  input:
+    | { actor: string | null; kind: 'create'; name: string; seed: string }
+    | { actor: string | null; kind: 'start'; id: string; name: string }
+    | { actor: string | null; kind: 'tick'; id: string; name: string; day: number }
+    | { actor: string | null; kind: 'bots'; id: string; name: string; from: number; to: number },
+): AuditPreview {
+  const common = {
+    actor: input.actor ?? UNKNOWN_ACTOR,
+    subjectKind: 'world',
+    outcome: 'allowed' as const,
+    reasonCode: null,
+  }
+  if (input.kind === 'create') {
+    return {
+      ...common,
+      action: 'admin.world.created',
+      // The id does not exist until nda has generated the map. Saying so beats printing a blank.
+      subjectId: 'the id of the world this generates',
+      notes: [
+        `The row records the name, the size, the season length, the tick interval and the seed${
+          input.seed === '' ? ' nda chooses' : ` — ${input.seed}`
+        }.`,
+        'The seed is what makes a world reproducible: the same seed and the same inputs resolve identically, which is why it is on the record rather than only in the database.',
+        'Generating a world does not open it. Nobody can join until it is started.',
+      ],
+    }
+  }
+  if (input.kind === 'start') {
+    return {
+      ...common,
+      action: 'admin.world.started',
+      subjectId: input.id,
+      notes: [
+        `${input.name} moves from lobby to active, and days begin resolving on its own schedule.`,
+        'There is no route back to lobby. A world that should not have been opened is archived, not un-started.',
+      ],
+    }
+  }
+  if (input.kind === 'tick') {
+    return {
+      ...common,
+      action: 'admin.world.ticked',
+      subjectId: input.id,
+      notes: [
+        `Day ${input.day + 1} of ${input.name} is queued for resolution now instead of at the next tick.`,
+        'The row is written when the day is ACCEPTED, not when it resolves — the job runs behind the world\'s lease, which is what stops this and the scheduler advancing the same day twice.',
+      ],
+    }
+  }
+  return {
+    ...common,
+    action: 'admin.world.bots.changed',
+    subjectId: input.id,
+    notes: [
+      `The row records ${input.from} bots BEFORE and ${input.to} after, so the record says what it was until now rather than only what it becomes.`,
+      input.to > input.from
+        ? `${input.to - input.from} more bots join ${input.name} and start acting on the next day it resolves.`
+        : input.to < input.from
+          ? `${input.from - input.to} bots are retired from ${input.name}. What they built stays in the world.`
+          : 'The count is unchanged, so this writes a row that says so and nothing else happens.',
+    ],
+  }
+}

@@ -217,6 +217,22 @@ export function outcomeTone(outcome: string): Tone {
   return { tone: 'mute', glyph: '?', word: outcome.toUpperCase() }
 }
 
+/**
+ * `nda/src/worlds.ts` — where a world is in its own life.
+ *
+ * A world in LOBBY is warn rather than mute, and that is the whole judgement here: it is finished,
+ * it has a map, and not one person can be in it until an operator opens it. That is work waiting,
+ * which is what this console's warn tone means everywhere else — the same reading `approvalTone`
+ * gives `pending`. Rendering it as a neutral state would put the one world that needs a decision
+ * in the same visual register as the ones that are over.
+ */
+export function worldTone(status: string): Tone {
+  if (status === 'lobby') return { tone: 'warn', glyph: '◷', word: 'IN LOBBY' }
+  if (status === 'active') return { tone: 'good', glyph: '●', word: 'BEING PLAYED' }
+  if (status === 'archived') return { tone: 'mute', glyph: '⊘', word: 'ARCHIVED' }
+  return { tone: 'mute', glyph: '?', word: status.toUpperCase() }
+}
+
 /** `admin-api/src/broadcasts.ts`. */
 export function severityTone(severity: string): Tone {
   if (severity === 'incident') return { tone: 'crit', glyph: '■', word: 'INCIDENT' }

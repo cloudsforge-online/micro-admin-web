@@ -40,6 +40,7 @@ import { FlagsPage } from './pages/flags.tsx'
 import { MailPage } from './pages/mail.tsx'
 import { NotFoundPage } from './pages/not-found.tsx'
 import { SupportPage } from './pages/support.tsx'
+import { WorldsPage } from './pages/worlds.tsx'
 import { CategoriesPage } from './pages/foresight/categories.tsx'
 import { MarketPage } from './pages/foresight/market.tsx'
 import { MarketsPage } from './pages/foresight/markets.tsx'
@@ -217,6 +218,16 @@ export function App() {
                   thing nginx.conf's enumeration exists to prevent, reintroduced in the router. */}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
+            {/* Forge Worlds. One screen and no wildcard — see the note on the route in
+                lib/routes.ts for why a `/worlds/<uuid>` page would answer no question. */}
+            <Route
+              path="worlds"
+              element={
+                <ProtectedRoute>
+                  <WorldsPage />
+                </ProtectedRoute>
+              }
+            />
             {/* Unknown paths render inside the shell, so the operator keeps the navigation they
                 need to get back out — under a real 404, which nginx.conf preserves. */}
             <Route path="*" element={<NotFoundPage />} />

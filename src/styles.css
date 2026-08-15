@@ -1611,3 +1611,55 @@ a.aw-sources__title {
   padding-top: var(--cf-space-xl);
   border-top: 1px solid var(--cf-line);
 }
+
+/* ----------------------------- worlds ------------------------------ */
+
+/*
+ * One world, with its facts and the actions that can be taken on it.
+ *
+ * An OUTER frame around inner `.aw-action` blocks, which is a nesting no other screen in this
+ * console has: everywhere else an action stands alone under a heading. Here three of them belong
+ * to one world and there may be several worlds on the page, so without the frame "Start the
+ * season" and "Bring it to 12" float between two worlds with nothing saying which one they act
+ * on — and starting the wrong world is the one action on this screen that has no way back.
+ *
+ * So the frame is load-bearing rather than decorative, and it is drawn one step quieter than the
+ * actions inside it (the page background rather than `--cf-bg-raised`) so the nesting reads as
+ * containment rather than as a second, competing card.
+ */
+.aw-card {
+  margin: 0 0 var(--cf-space-xl);
+  padding: var(--cf-space-xl);
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+}
+
+.aw-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cf-space-lg);
+  margin-bottom: var(--cf-space-lg);
+}
+
+.aw-card__title {
+  margin: 0;
+  font-size: var(--cf-text-lg);
+}
+
+/*
+ * The generator's six fields.
+ *
+ * `auto-fit` with a floor rather than a fixed column count: five of the six are short numbers and
+ * a six-row single column would put the season length a scroll away from the tick interval, which
+ * are the two an operator has to choose TOGETHER — they multiply out to how long the season takes
+ * in real time. At narrow widths it collapses to one column, which is the same reasoning in
+ * reverse.
+ */
+.aw-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--cf-space-lg);
+  margin: var(--cf-space-lg) 0;
+}
