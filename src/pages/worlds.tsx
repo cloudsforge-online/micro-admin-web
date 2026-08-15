@@ -118,7 +118,11 @@ export function WorldsPage() {
       {worlds.state === 'empty' && (
         <Empty
           title="No world has been generated yet"
-          hint="Ninety Days After has been running as a service without one. Generating the first world above is what takes the title out of draft."
+          // NOT "this is what takes the title out of draft" — it never was. `nda` writes worlds and
+          // nothing else; a title's status lives in `worlds`' own register (`POST /v1/titles`), which
+          // this screen does not call. The old sentence sent an operator here to fix something this
+          // page cannot reach.
+          hint="Generate one here, then start it. Until a world exists there is nothing for a player to open at /play — Ninety Days After serves worlds and has none."
         />
       )}
 
