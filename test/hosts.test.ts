@@ -173,7 +173,35 @@ describe('placement', () => {
   it('checks the public origin FIRST, before the registered check', () => {
     // The public case is a security problem; the unregistered case is a configuration one. An
     // ordering that reported the milder answer would render the console on a public address.
-    assert.equal(placement('https://trade.cloudsforge.online', 'trade.cloudsforge.online', hosts), 'public-origin')
+    //
+    // WALKED, NOT NAMED. This asserted one literal — `trade.cloudsforge.online` — and wave 3b of
+    // the apex consolidation turned that into a hostname nothing serves. The assertion still
+    // passed nothing and failed loudly, but what it had become was a statement about a dead host
+    // rather than about the order of two branches. Nine more surfaces are going to move, so a
+    // second literal would only relocate the same rot.
+    //
+    // Every public origin ALSO fails the registered check, because `PRODUCT` is `admin` and no
+    // public surface shares admin's origin. That is what makes this an ordering test: if the two
+    // branches were the other way round, every origin below would answer `unregistered` and the
+    // console would render on a public address behind a mild warning.
+    const origins = [
+      ...new Set(
+        PUBLIC_SURFACE_KEYS.map((key) => {
+          try {
+            return new URL(hosts[key]).origin
+          } catch {
+            return ''
+          }
+        }).filter(Boolean),
+      ),
+    ]
+    assert.ok(origins.length >= 2, `only ${origins.length} public origin(s) — this asserts nothing`)
+    const own = new URL(hosts[PRODUCT]).origin
+    for (const origin of origins) {
+      // The precondition: the milder branch really is what this one outranks.
+      assert.notEqual(origin, own, `${origin} is admin's OWN origin and cannot test the ordering`)
+      assert.equal(placement(origin, new URL(origin).hostname, hosts), 'public-origin', origin)
+    }
   })
 
   it('is unregistered on another operator surface’s origin', () => {
