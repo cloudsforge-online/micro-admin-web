@@ -515,7 +515,22 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
     const call: Wire = {
       method,
       url: raw,
-      path: `${parsed.pathname}${parsed.search}`,
+      // ── `path` IS WHAT THE SERVICE SEES, NOT WHAT THIS CONSOLE TYPED ──────────────────────
+      //
+      // Wave 3i moved Forge Foresight to `<apex>/foresight`, and this console calls it
+      // cross-origin with the whole registry URL — so the request it issues is
+      // `/foresight/ideas`. The gateway routes that with `stripPrefix`, so micro-foresight is
+      // asked for `/ideas`, exactly as before.
+      //
+      // This harness stands in for the gateway, so it strips too: a scenario's `routes` keys and
+      // its `wire[].path` assertions are claims about what the SERVICE was asked, and none of
+      // them should have had to change for somebody else's mount. `url` keeps the whole address.
+      //
+      // `/foresight` only — this console is `admin.<apex>`, which stays on its own hostname for
+      // the reason §1 gives, so its OWN requests carry no mount.
+      path: `${
+        parsed.pathname.startsWith('/foresight/') ? parsed.pathname.slice('/foresight'.length) : parsed.pathname
+      }${parsed.search}`,
       origin: parsed.origin,
       headers,
       body,

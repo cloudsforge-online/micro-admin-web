@@ -296,7 +296,7 @@ describe('the Foresight API base', () => {
 
   it('is ABSOLUTE from this console’s own production origin', () => {
     installWindow('https://admin.cloudsforge.online/')
-    assert.equal(foresightApiBase(), 'https://foresight.cloudsforge.online')
+    assert.equal(foresightApiBase(), 'https://cloudsforge.online/foresight')
   })
 
   it('is absolute under `pnpm dev` too, at the registry’s devPort', () => {
@@ -337,10 +337,10 @@ describe('the Foresight API base', () => {
     // base and an operator panel making same-origin calls from the public product's page. Pinning
     // the absolute answer means the invariant does not depend on a second function staying right.
     // ══════════════════════════════════════════════════════════════════════════════════════════
-    installWindow('https://foresight.cloudsforge.online/')
+    installWindow('https://cloudsforge.online/foresight/')
     assert.equal(
       foresightApiBase(),
-      'https://foresight.cloudsforge.online',
+      'https://cloudsforge.online/foresight',
       'the Foresight base must never be relative, on any origin whatsoever',
     )
   })
@@ -359,6 +359,15 @@ describe('the Foresight API base', () => {
       'foresight must remain an origin this console refuses to render at',
     )
     const hosts = production()
-    assert.equal(placement('https://foresight.cloudsforge.online', 'foresight.cloudsforge.online', hosts), 'public-origin')
+    // ── SINCE WAVE 3i THE PUBLIC ORIGIN IS THE APEX ITSELF ────────────────────────────────────
+    //
+    // This named `foresight.cloudsforge.online` — a hostname that 301s now, and one the registry
+    // no longer strips, so it would be read as an apex of its own. Forge Foresight is
+    // `<apex>/foresight`, which means the origin this console must refuse to be served from is
+    // the APEX. That is a stronger statement than the old one, not a weaker one: the apex is
+    // where thirteen other public surfaces live too.
+    //
+    // `placement` takes an ORIGIN and a HOSTNAME; neither carries a path.
+    assert.equal(placement('https://cloudsforge.online', 'cloudsforge.online', hosts), 'public-origin')
   })
 })
