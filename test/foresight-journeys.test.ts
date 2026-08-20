@@ -45,7 +45,7 @@ import { QueuePage } from '../src/pages/foresight/queue.tsx'
 /** This console's own origin. The Foresight API is therefore CROSS-origin, as in production. */
 const ORIGIN = 'https://admin.cloudsforge.online'
 /** Where `cloudsforgeHosts()` resolves foresight from that origin. Never written by hand below. */
-const FORESIGHT = 'https://foresight.cloudsforge.online'
+const FORESIGHT = 'https://cloudsforge.online/foresight'
 
 const MARKET_ID = '3f2a1b9c-4d5e-4f60-8a1b-2c3d4e5f6071'
 const IDEA_ID = '9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a'
@@ -214,10 +214,16 @@ describe('the idea queue renders against a stubbed foresight', () => {
         // change moves both together.
         const asked = s.api.matching('GET /ideas')
         assert.equal(asked.length, 1, `asked for the queue ${asked.length} times`)
-        assert.equal(
-          new URL(asked[0]!.url, ORIGIN).origin,
-          FORESIGHT,
-          'the queue was requested from this console instead of from foresight',
+        // ── THE BASE, NOT THE ORIGIN — WAVE 3i ──────────────────────────────────────────────
+        //
+        // `FORESIGHT` is `<apex>/foresight` now, and an origin never carries a path. Comparing
+        // the origin alone would ALSO pass for the thirteen other surfaces on that apex, and for
+        // this console itself if it ever moved there — which is precisely what this assertion
+        // exists to rule out.
+        const called = new URL(asked[0]!.url, ORIGIN)
+        assert.ok(
+          `${called.origin}${called.pathname}`.startsWith(FORESIGHT),
+          `the queue was requested from ${called.origin}${called.pathname}, not from ${FORESIGHT}`,
         )
         s.clean('the idea queue')
       },

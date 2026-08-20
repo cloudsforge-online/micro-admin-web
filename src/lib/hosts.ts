@@ -216,7 +216,29 @@ export function apiBase(): string {
  * identically until the reader touches the switcher.
  */
 export function foresightApiBase(): string {
-  return viewedSurfaceUrl(FORESIGHT_SURFACE)
+  const url = viewedSurfaceUrl(FORESIGHT_SURFACE)
+  // ── THE WHOLE URL IN PRODUCTION, THE ORIGIN ALONE ON A DEV STACK ────────────────────────────
+  //
+  // Wave 3i moved Forge Foresight to `<apex>/foresight`, so the registry value now carries a
+  // mount and this console must send it: `<apex>/foresight/ideas` is where the gateway finds the
+  // service, and it strips the prefix before micro-foresight sees anything.
+  //
+  // Under `pnpm dev` the same registry composes `http://localhost:4021/foresight`, and
+  // micro-foresight binds that port DIRECTLY — nothing sits in front of it to take the prefix
+  // back off, so every read from these screens would 404 locally while production was fine.
+  //
+  // Branching on the resolved HOSTNAME rather than on a flag, because a flag is a build-time
+  // constant and this repository has none.
+  try {
+    const parsed = new URL(url)
+    const local =
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '127.0.0.1' ||
+      parsed.hostname.endsWith('.local')
+    return local ? parsed.origin : url
+  } catch {
+    return url
+  }
 }
 
 /** The page origin, or a stable placeholder when there is no document (tests, prerender). */
